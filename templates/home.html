@@ -41,6 +41,11 @@
     <div class="row">
         <div class="col-lg-6 col-lg-offset-3" style="text-align: center;">
             <input type="text" class="form-control" style="display: inline-block; width: 60%;" placeholder="Date Range" value="{{ start }} - {{ end }}" id="date_range" />
+            {% if is_manager %}
+                <br /><br />
+            <input type="checkbox" id="include_manager_hours" checked style="padding-right: 20px;" />
+                <label for="include_manager_hours">Include Manager's Hours</label>
+            {% endif %}
         </div>
     </div>
 {% endblock %}
@@ -54,6 +59,10 @@
     <script language="JavaScript" src="/static/js/daterangepicker.js"></script>
 	<script language="javascript">
         $(document).ready(function(){
+            $('#include_manager_hours').on('change', function(){
+                GetOverview();
+               GetDistro();
+            });
            $('#date_range').daterangepicker({
                    drops: 'up'
                }).on('apply.daterangepicker', function(ev, picker){

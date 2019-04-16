@@ -18,7 +18,7 @@ function GetOverview()
 
 	$.ajax({
 		url: 'get_all_entries',
-		data: {start: $('#date_range').val().split(' - ')[0], end: $('#date_range').val().split(' - ')[1], order: 'date', by: 'asc'},
+		data: {start: $('#date_range').val().split(' - ')[0], end: $('#date_range').val().split(' - ')[1], order: 'date', by: 'asc', include_manager: $('#include_manager_hours').prop('checked')},
 		dataType: 'json',
 		success: function(data){
 			// billable hours
@@ -112,7 +112,7 @@ function GetDistro()
 	$('#chart').html('<h3 style="width: 100%; text-align: center;">Loading...</h3>');
 	$.ajax({
 		url: "get_all_distribution",
-		data: {start_date: $('#date_range').val().split(' - ')[0], end_date: $('#date_range').val().split(' - ')[1]},
+		data: {start_date: $('#date_range').val().split(' - ')[0], end_date: $('#date_range').val().split(' - ')[1], include_manager: $('#include_manager_hours').prop('checked')},
 		dataType: 'json',
 		success: function(data){
 			SetupChart(data, "Time spent from "+$('#date_range').val().split(' - ')[0]+' to ' + $('#date_range').val().split(' - ')[1]);

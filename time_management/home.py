@@ -7,7 +7,7 @@ import json
 from django.contrib.auth.decorators import login_required
 from time_management.decorators import user_is_in_manager_group
 from time_management.time_tools import get_user_list
-from time_management.models import RedmineUser
+from time_management.models import RedmineUser, Team
 
 
 @login_required
@@ -17,7 +17,12 @@ def home(request):
     end_date = datetime.datetime.now().today().strftime('%m/%d/%Y')
     start_date = str(datetime.datetime.now().today().month) + '/' + str(1) + '/' + \
                  str(datetime.datetime.now().today().year)
-    return render(request, 'home.html', {'start': start_date, 'end': end_date})
+
+    teams = Team.objects.filter(manager__login=request.user.username)
+    is_manager = False
+    if len(teams) > 0:
+        is_manager = True
+    return render(request, 'home.html', {'start': start_date, 'end': end_date, 'is_manager': is_manager})
 
 
 @login_required
@@ -325,6 +330,11 @@ def get_entries_home_page(request):
     if request.GET['order'] == 'activity':
         order_by = 'enumerations.name ' + order + ', projects.name ASC, time_entries.spent_on ASC'
 
+    include_manager = True
+    if 'include_manager' in request.GET:
+        if request.GET['include_manager'] == 'false':
+            include_manager = False
+
     # get the records for this user, month, and year
     if request.user.is_staff:
         cur.execute(
@@ -340,7 +350,7 @@ def get_entries_home_page(request):
                 'start': request.GET['start'], 'end': request.GET['end'],
                 'user': target, 'order': order_by})
     else:
-        user_id_list = get_user_list(request.user.username)
+        user_id_list = get_user_list(request.user.username, include_manager=include_manager)
         cur.execute(
             "SELECT time_entries.id, time_entries.project_id, projects.name, time_entries.issue_id, time_entries.hours, "
             "time_entries.comments, enumerations.name, time_entries.spent_on, custom_values.value, enumerations.id, "
@@ -685,11 +695,16 @@ def get_all_distribution(request):
     #         'start': request.GET['start_date'], 'end': request.GET['end_date']}
     # cur.execute(query)
 
+    include_manager = True
+    if 'include_manager' in request.GET:
+        if request.GET['include_manager'] == 'false':
+            include_manager = False
+
     if request.user.is_staff:
         cur.execute("SELECT id, name, parent_id FROM projects;")
     else:
         # get a list of users this person should be able to see (if manager, their team[s])
-        user_id_list = get_user_list(request.user.username)
+        user_id_list = get_user_list(request.user.username, include_manager=include_manager)
         print "User list:", user_id_list
         cur.execute("SELECT distinct(projects.id), projects.name, parent_id FROM projects "
                     "INNER JOIN members ON projects.id = members.project_id "
@@ -779,7 +794,7 @@ def get_all_distribution(request):
                             })
             else:
                 # get a list of users this person should be able to see (if manager, their team[s])
-                user_id_list = get_user_list(request.user.username)
+                user_id_list = get_user_list(request.user.username, include_manager=include_manager)
                 cur.execute("SELECT sum(hours) FROM time_entries "
                             "INNER JOIN users ON time_entries.user_id = users.id "
                             "WHERE project_id = %(project)s AND "
@@ -806,7 +821,7 @@ def get_all_distribution(request):
                         })
         else:
             # get a list of users this person should be able to see (if manager, their team[s])
-            user_id_list = get_user_list(request.user.username)
+            user_id_list = get_user_list(request.user.username, include_manager=include_manager)
             cur.execute("SELECT sum(hours) FROM time_entries "
                         "INNER JOIN users ON time_entries.user_id = users.id "
                         "WHERE project_id = %(project)s AND "

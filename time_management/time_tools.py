@@ -52,7 +52,7 @@ def manager_date_working_hours(day):
     return float(30) / float(working_days)
 
 
-def get_user_list(username, as_json=False):
+def get_user_list(username, as_json=False, include_manager=True):
     """
     Given a user ID, look up any teams this user is a manager for.  If they are, return a list of user IDs that are
     part of this team (including the user themselves).  If not, return only the user.
@@ -63,7 +63,10 @@ def get_user_list(username, as_json=False):
     # get their Redmine user id
     user = RedmineUser.objects.get(login=username)
     user_id = user.id
-    user_ids = [user_id]
+    user_ids = []
+
+    if include_manager:
+        user_ids.append(user_id)
 
     # grab a list teams they are a manager for (if any)
     teams = Team.objects.filter(manager__id=user_id)
