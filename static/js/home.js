@@ -44,25 +44,43 @@ function GetOverview()
 function SetupExpected(data)
 {
 	var entries = new Array();
+	var nonbillable_entries = new Array();
 	var expected_list = new Array();
 	var dates = new Array();
 
 	var next_date = '';
 	var current_sum = 0;
+	var current_nonbillable_sum = 0;
 	for(var i = 0; i < data.length; i++)
 	{
 		if(String(data[i].date) == next_date)
-			current_sum += data[i].hours;
+		{
+			if(data[i].activity.indexOf('on-billable') > 0){
+				current_nonbillable_sum += data[i].hours;
+			}
+			else{
+				current_sum += data[i].hours;
+			}
+
+		}
 		else
 		{
 			if(current_sum != 0)
 			{
 				entries.push(current_sum);
+				nonbillable_entries.push(current_nonbillable_sum);
 				expected_list.push(expected);
 				dates.push(next_date);
 			}
 			next_date = data[i].date;
-			current_sum = data[i].hours;
+			current_sum = 0;
+			current_nonbillable_sum = 0;
+			if(data[i].activity.indexOf('on-billable') > 0){
+				current_nonbillable_sum = data[i].hours;
+			}
+			else{
+				current_sum = data[i].hours;
+			}
 		}
 	}
 	if(data.length > 0)
@@ -99,11 +117,17 @@ function SetupExpected(data)
 			}
 		},
 		series: [{
-			name: 'Reported Hours',
+			name: 'Billable Hours',
 			color: '#76addb',
 			type: 'column',
 			data: entries
-		}]
+		},
+			{
+				name: "Non-Billable Hours",
+				color: '#ff4f4f',
+				type: 'column',
+				data: nonbillable_entries
+			}]
 	});
 }
 
