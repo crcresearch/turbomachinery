@@ -24,7 +24,9 @@ def entries_home(request):
         users = user_list
 
     return render(request, 'time_entries.html', {
-        'user_list': users
+        'user_list': users,
+        'start': (datetime.datetime.now() - datetime.timedelta(days=30)).strftime('%m/%d/%Y'),
+        'end': datetime.datetime.now().strftime('%m/%d/%Y')
     })
 
 

@@ -18,157 +18,157 @@ function Entry()
 function init()
 {
 	// make a call to get all of our info we need to fill out our time entries and options
-	$.ajax({
-		url: '../get_dates',
-		dataType: "json",
-		success: function(data){
+	// $.ajax({
+	// 	url: '../get_dates',
+	// 	dataType: "json",
+	// 	success: function(data){
 			// setup the month list
-			var months = data.months;
-			for(var i = 0; i < months.length; i++)
-			{
-				// create a new OPTION
-				var option = document.createElement("li");
-                var option_link = document.createElement("a");
-
-				option_link.value = months[i].number;
-				option_link.innerHTML = months[i].name;
-                option_link.name = 'month';
-                $(option_link).css('cursor', 'pointer');
-                $(option_link).click(function(){
-                    $('#month_name').html(this.innerHTML);
-                    $('#month_name').val(this.value);
-                    GetEntries();
-                });
-                $(option).append(option_link);
-
-				// add this option to our month select
-				$('#month_dropdown').append(option);
-			}
-
-			// setup the year list
-			var years = data.years;
-			for(var i = 0; i < years.length; i++)
-			{
-				// create a new OPTION
-				var option = document.createElement("li");
-                var option_link = document.createElement("a");
-
-				option_link.value = years[i].year;
-				option_link.innerHTML = years[i].year;
-                $(option_link).css('cursor', 'pointer');
-                $(option_link).click(function(){
-                    $('#year_name').html(this.innerHTML);
-                    $('#year_name').val(this.value);
-                    GetEntries();
-                });
-                $(option).append(option_link);
-
-				// add this option to our month select
-				$('#year_dropdown').append(option);
-			}
-
-			// add one more year (so we can look at next year if desired)
-            // create a new OPTION
-            var option = document.createElement("li");
-            var option_link = document.createElement("a");
-
-            option_link.value = years[years.length-1].year + 1;
-            option_link.innerHTML = years[years.length-1].year + 1;
-            $(option_link).css('cursor', 'pointer');
-            $(option_link).click(function(){
-                $('#year_name').html(this.innerHTML);
-                $('#year_name').val(this.value);
-                GetEntries();
-            });
-            $(option).append(option_link);
-
-            // add this option to our month select
-            $('#year_dropdown').append(option);
-			Establish();
-
-
-			//---------------------- Add functionality to our "Add Entry" button -------------------------//
-			$('#add_button').click(function(){
-				AddEntry();
-			});
-			
-			//---------------------- Add functionality to our "Save" button ------------------------------//
-			$('#save_button').click(function(){
-				// gather all changes that need to be made
-				var update_entries = [];
-				for(var i = 0; i < UpdateEntries.length; i++)
-				{
-					var entry = new Entry();
-					// are we working with a new entry, or existing?
-					if(UpdateEntries[i].indexOf("new") >= 0)
-					{
-						// new entry!
-						// get the number of our "new" entry
-						var new_entry = UpdateEntries[i].split('_')[2];
-						entry.id = 'new_entry';
-						entry.project = $('#project_new_'+new_entry).val();
-						entry.date = $('#entry_date_new_'+new_entry).val();
-						entry.hours = $('#entry_hours_new_'+new_entry).val();
-						entry.comments = $('#comment_new_'+new_entry).val();
-						entry.issue = $('#issue_new_'+new_entry).val();
-						entry.activity = $('#activity_new_'+new_entry).val();
-						entry.logas = $('#logas_new_'+new_entry).val();
-					}
-					else
-					{
-						// existing entry!
-						entry.id = UpdateEntries[i];
-						entry.project = $('#project_'+UpdateEntries[i]).val();
-						entry.date = $('#entry_date_'+UpdateEntries[i]).val();
-						entry.hours = $('#entry_hours_'+UpdateEntries[i]).val();
-						entry.comments = $('#comment_'+UpdateEntries[i]).val();
-						entry.issue = $('#issue_'+UpdateEntries[i]).val();
-						entry.activity = $('#activity_'+UpdateEntries[i]).val();
-						entry.logas = $('#logas_'+UpdateEntries[i]).val();
-					}
-
-					// add this entry to the list to be updated
-					update_entries.push(entry);
-				}
-
-				$.ajax({
-					url: '../update_entries',
-					data: {entries: JSON.stringify(update_entries), target: $('#username').val()},
-					contentType: "application/json; charset=utf-8",
-					dataType: 'text',
-					success: function(data){
-						if(data == 'Error 97')
-						{
-							alert("You do not have permission to modify some of the entries you attempted to.\n\nBailing...");
-							return;
-						}
-						if(data == 'Nothing to save')
-							return;
-	
-						if(data == '200')
-						{
-							alert("Time entries saved!");
-							for(var i = 0; i < UpdateEntries.length; i++)
-							{
-								$('#div_'+UpdateEntries[i]).toggleClass('time_entry_mod');
-							}
-							UpdateEntries = [];
-							GetEntries();
-							return;
-						}
-					},
-					error: function(){
-						alert("Failed to save entries.");
-					}
-				});
-			});
+			// var months = data.months;
+			// for(var i = 0; i < months.length; i++)
+			// {
+			// 	// create a new OPTION
+			// 	var option = document.createElement("li");
+            //     var option_link = document.createElement("a");
+			//
+			// 	option_link.value = months[i].number;
+			// 	option_link.innerHTML = months[i].name;
+            //     option_link.name = 'month';
+            //     $(option_link).css('cursor', 'pointer');
+            //     $(option_link).click(function(){
+            //         $('#month_name').html(this.innerHTML);
+            //         $('#month_name').val(this.value);
+            //         GetEntries();
+            //     });
+            //     $(option).append(option_link);
+			//
+			// 	// add this option to our month select
+			// 	$('#month_dropdown').append(option);
+			// }
+			//
+			// // setup the year list
+			// var years = data.years;
+			// for(var i = 0; i < years.length; i++)
+			// {
+			// 	// create a new OPTION
+			// 	var option = document.createElement("li");
+            //     var option_link = document.createElement("a");
+			//
+			// 	option_link.value = years[i].year;
+			// 	option_link.innerHTML = years[i].year;
+            //     $(option_link).css('cursor', 'pointer');
+            //     $(option_link).click(function(){
+            //         $('#year_name').html(this.innerHTML);
+            //         $('#year_name').val(this.value);
+            //         GetEntries();
+            //     });
+            //     $(option).append(option_link);
+			//
+			// 	// add this option to our month select
+			// 	$('#year_dropdown').append(option);
+			// }
+			//
+			// // add one more year (so we can look at next year if desired)
+            // // create a new OPTION
+            // var option = document.createElement("li");
+            // var option_link = document.createElement("a");
+			//
+            // option_link.value = years[years.length-1].year + 1;
+            // option_link.innerHTML = years[years.length-1].year + 1;
+            // $(option_link).css('cursor', 'pointer');
+            // $(option_link).click(function(){
+            //     $('#year_name').html(this.innerHTML);
+            //     $('#year_name').val(this.value);
+            //     GetEntries();
+            // });
+            // $(option).append(option_link);
+			//
+            // // add this option to our month select
+            // $('#year_dropdown').append(option);
+	Establish();
 
 
-		},
-		error: function(){
-			alert("Could not get time entries.  Please contact the system administrator.");
-		}
+	//---------------------- Add functionality to our "Add Entry" button -------------------------//
+	$('#add_button').click(function(){
+		AddEntry();
 	});
+
+	//---------------------- Add functionality to our "Save" button ------------------------------//
+	$('#save_button').click(function(){
+		// gather all changes that need to be made
+		var update_entries = [];
+		for(var i = 0; i < UpdateEntries.length; i++)
+		{
+			var entry = new Entry();
+			// are we working with a new entry, or existing?
+			if(UpdateEntries[i].indexOf("new") >= 0)
+			{
+				// new entry!
+				// get the number of our "new" entry
+				var new_entry = UpdateEntries[i].split('_')[2];
+				entry.id = 'new_entry';
+				entry.project = $('#project_new_'+new_entry).val();
+				entry.date = $('#entry_date_new_'+new_entry).val();
+				entry.hours = $('#entry_hours_new_'+new_entry).val();
+				entry.comments = $('#comment_new_'+new_entry).val();
+				entry.issue = $('#issue_new_'+new_entry).val();
+				entry.activity = $('#activity_new_'+new_entry).val();
+				entry.logas = $('#logas_new_'+new_entry).val();
+			}
+			else
+			{
+				// existing entry!
+				entry.id = UpdateEntries[i];
+				entry.project = $('#project_'+UpdateEntries[i]).val();
+				entry.date = $('#entry_date_'+UpdateEntries[i]).val();
+				entry.hours = $('#entry_hours_'+UpdateEntries[i]).val();
+				entry.comments = $('#comment_'+UpdateEntries[i]).val();
+				entry.issue = $('#issue_'+UpdateEntries[i]).val();
+				entry.activity = $('#activity_'+UpdateEntries[i]).val();
+				entry.logas = $('#logas_'+UpdateEntries[i]).val();
+			}
+
+			// add this entry to the list to be updated
+			update_entries.push(entry);
+		}
+
+		$.ajax({
+			url: '../update_entries',
+			data: {entries: JSON.stringify(update_entries), target: $('#username').val()},
+			contentType: "application/json; charset=utf-8",
+			dataType: 'text',
+			success: function(data){
+				if(data == 'Error 97')
+				{
+					alert("You do not have permission to modify some of the entries you attempted to.\n\nBailing...");
+					return;
+				}
+				if(data == 'Nothing to save')
+					return;
+
+				if(data == '200')
+				{
+					alert("Time entries saved!");
+					for(var i = 0; i < UpdateEntries.length; i++)
+					{
+						$('#div_'+UpdateEntries[i]).toggleClass('time_entry_mod');
+					}
+					UpdateEntries = [];
+					GetEntries();
+					return;
+				}
+			},
+			error: function(){
+				alert("Failed to save entries.");
+			}
+		});
+	});
+
+
+	// 	},
+	// 	error: function(){
+	// 		alert("Could not get time entries.  Please contact the system administrator.");
+	// 	}
+	// });
 
 }
 
@@ -182,35 +182,35 @@ function Establish()
 
 	//------------- Setting up Current Month ------------------//
 	//------------- Setting up Current Month ------------------//
-	var now = new Date();
-	var this_year = now.getFullYear();
-	var this_month = now.getMonth() + 1;
-
-	// now select this month from the drop-down list
-    // find the month for this month
-    $('a[name="month"]').each(function(){
-       if($(this).val() == this_month)
-       {
-           $('#month_name').html($(this).html());
-           $('#month_name').val(this.value);
-       }
-    });
+	// var now = new Date();
+	// var this_year = now.getFullYear();
+	// var this_month = now.getMonth() + 1;
+	//
+	// // now select this month from the drop-down list
+    // // find the month for this month
+    // $('a[name="month"]').each(function(){
+    //    if($(this).val() == this_month)
+    //    {
+    //        $('#month_name').html($(this).html());
+    //        $('#month_name').val(this.value);
+    //    }
+    // });
 
 	//$('#month_name').html(this_month);
 
 	// and now select this year
-	$('#year_name').html(this_year);
-    $('#year_name').val(this_year);
+	// $('#year_name').html(this_year);
+    // $('#year_name').val(this_year);
 
 
 	//--------------- Setup Onchange Events for Month/Year Selections ----------------------------------//
-	$('#month_name').change(function(){
-		GetEntries();
-	});
-
-	$('#year_name').change(function(){
-		GetEntries();
-	});
+	// $('#month_name').change(function(){
+	// 	GetEntries();
+	// });
+	//
+	// $('#year_name').change(function(){
+	// 	GetEntries();
+	// });
 
 	//--------------- Setup Click Events for Certain Column Headers ----------------------------------//
 	$('.project_header').click(function(){
@@ -293,9 +293,11 @@ function GetEntries()
 	}
 
 	// now that we have our date setup, let's get our entries!
+	var start_range = $('#date_range').val().split(' - ')[0];
+	var end_range = $('#date_range').val().split(' - ')[1];
 	$.ajax({
 		url: '../get_entries',
-		data: {month: $('#month_name').val(), year: $('#year_name').val(), target: target_user, order: ORDER_BY, by: ORDER},
+		data: {start: start_range, end: end_range, target: target_user, order: ORDER_BY, by: ORDER},
 		dataType: 'json',
 		success: function(data){
 			// first check if we passed the "tests"

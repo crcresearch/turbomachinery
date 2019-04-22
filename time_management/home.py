@@ -50,10 +50,10 @@ def get_entries_home(request):
     #     target = request.GET['target']
 
     # what is the month?
-    month = request.GET['month']
+    #month = request.GET['month']
 
     # what is the year?
-    year = request.GET['year']
+    #year = request.GET['year']
 
     # connect to the database
     cur = connection.cursor()
@@ -74,6 +74,9 @@ def get_entries_home(request):
     if request.GET['order'] == 'activity':
         order_by = 'enumerations.name ' + order + ', projects.name ASC, time_entries.spent_on ASC'
 
+    start = datetime.datetime.strptime(request.GET['start'], '%m/%d/%Y').strftime('%Y-%m-%d')
+    end = datetime.datetime.strptime(request.GET['end'], '%m/%d/%Y').strftime('%Y-%m-%d')
+
     # get the records for this user, month, and year
     cur.execute(
         "SELECT time_entries.id, time_entries.project_id, projects.name, time_entries.issue_id, time_entries.hours, "
@@ -81,18 +84,20 @@ def get_entries_home(request):
         "projects.id FROM time_entries INNER JOIN custom_values ON custom_values.customized_id = time_entries.id "
         "INNER JOIN users ON users.id = time_entries.user_id "
         "INNER JOIN projects ON projects.id = time_entries.project_id "
-        "INNER JOIN enumerations ON enumerations.id = time_entries.activity_id WHERE time_entries.tyear = %(year)s "
-        "AND custom_values.value != '' and time_entries.tmonth = %(month)s AND users.login = '%(user)s' ORDER BY %(order)s;" % {
-            'month': month, 'year': year, 'user': target, 'order': order_by})
+        "INNER JOIN enumerations ON enumerations.id = time_entries.activity_id WHERE "
+        "custom_values.value != '' and time_entries.spent_on >= '%(start)s' and time_entries.spent_on <= '%(end)s' "
+        "AND users.login = '%(user)s' ORDER BY %(order)s;" % {
+            'start': start, 'end': end, 'user': target, 'order': order_by})
 
     print cur.mogrify( "SELECT time_entries.id, time_entries.project_id, projects.name, time_entries.issue_id, time_entries.hours, "
         "time_entries.comments, enumerations.name, time_entries.spent_on, custom_values.value, enumerations.id, "
         "projects.id FROM time_entries INNER JOIN custom_values ON custom_values.customized_id = time_entries.id "
         "INNER JOIN users ON users.id = time_entries.user_id "
         "INNER JOIN projects ON projects.id = time_entries.project_id "
-        "INNER JOIN enumerations ON enumerations.id = time_entries.activity_id WHERE time_entries.tyear = %(year)s "
-        "AND custom_values.value != '' and time_entries.tmonth = %(month)s AND users.login = '%(user)s' ORDER BY %(order)s;" % {
-            'month': month, 'year': year, 'user': target, 'order': order_by})
+        "INNER JOIN enumerations ON enumerations.id = time_entries.activity_id WHERE "
+        "AND custom_values.value != '' and time_entries.spent_on >= '%(start)s' and time_entries.spent_on <= '%(end)s' "
+                       "AND users.login = '%(user)s' ORDER BY %(order)s;" % {
+            'start': start, 'end': end, 'user': target, 'order': order_by})
 
     entries = cur.fetchall()
     print entries
@@ -212,15 +217,13 @@ def get_entries_home(request):
     if request.user.is_staff:
         cur.execute(
             "SELECT firstname, lastname, login FROM users "
-            "ORDER BY login DESC, firstname, lastname;" % {
-                'month': month, 'year': year})
+            "ORDER BY login DESC, firstname, lastname;")
     else:
         user_list = get_user_list(request.user.username)
         cur.execute(
             "SELECT firstname, lastname, login FROM users "
             "WHERE id in %(users)s "
-            "ORDER BY login DESC, firstname, lastname;" % {
-                'month': month, 'year': year, 'users': user_list})
+            "ORDER BY login DESC, firstname, lastname;" % {'users': user_list})
     users = cur.fetchall()
     # loop through the users, constructing a dictionary
     user_list = []
@@ -232,11 +235,11 @@ def get_entries_home(request):
 
     # if the month passed in is NOT this month, then "today" should be the last day of the month
     today = datetime.date.today()
-    if int(month) != datetime.date.today().month:
-        today = datetime.date(int(year), int(month), int(calendar.monthrange(int(year), int(month))[1]))
+    # if int(month) != datetime.date.today().month:
+    #     today = datetime.date(int(year), int(month), int(calendar.monthrange(int(year), int(month))[1]))
 
     # get a list of holidays for this year
-    holiday_list = get_holidays(int(year))
+    holiday_list = get_holidays(today.year)
 
     # setup a count for all weekdays
     # (Monday = [0], Tuesday = [1], etc...)
