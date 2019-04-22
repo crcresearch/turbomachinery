@@ -8,6 +8,7 @@ from django.contrib.auth.decorators import login_required
 from time_management.decorators import user_is_in_manager_group
 from time_management.time_tools import get_user_list
 from time_management.models import RedmineUser, Team
+from dateutil.relativedelta import relativedelta
 
 
 @login_required
@@ -74,8 +75,13 @@ def get_entries_home(request):
     if request.GET['order'] == 'activity':
         order_by = 'enumerations.name ' + order + ', projects.name ASC, time_entries.spent_on ASC'
 
-    start = datetime.datetime.strptime(request.GET['start'], '%m/%d/%Y').strftime('%Y-%m-%d')
-    end = datetime.datetime.strptime(request.GET['end'], '%m/%d/%Y').strftime('%Y-%m-%d')
+    if 'start' in request.GET:
+        start = datetime.datetime.strptime(request.GET['start'], '%m/%d/%Y').strftime('%Y-%m-%d')
+        end = datetime.datetime.strptime(request.GET['end'], '%m/%d/%Y').strftime('%Y-%m-%d')
+
+    if 'month' in request.GET:
+        start = datetime.datetime(int(request.GET['year']), int(request.GET['month']), 1)
+        end = start + relativedelta(months=1)
 
     # get the records for this user, month, and year
     cur.execute(
