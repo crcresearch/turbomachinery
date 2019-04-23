@@ -30,6 +30,7 @@ from time_management.reports import weekly_report_form_url
 from time_management.rates import rates_home, save_rate, save_start_date, save_end_date, save_rates, delete_rates, \
     add_rates, add_single_category
 from time_management.auth import login_page, logout_request
+from time_management.project_hours import project_hours_page, get_project_hours, get_users_for_project
 
 # import cas.views
 from django.conf import settings
@@ -76,6 +77,12 @@ urlpatterns = [
 
 
     # ------------- MANAGERS ONLY ----------------#
+
+    # project hours
+    url(r'^project_hours/$', project_hours_page, name='project_hours'),
+    url(r'^project_hour_entries/$', get_project_hours, name='get_project_hours'),
+    url(r'^get_users_for_project/$', get_users_for_project, name='get_project_users'),
+
 
     # team management
     url(r'^teams/$', team_management, name='team_management'),
