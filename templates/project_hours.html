@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block title %}Redmine Project Hours Logged{% endblock %}
+
+{% block css %}
+    <link href='/static/css/manage.css' rel="stylesheet" type="text/css" />
+    <link rel='icon' type="image/ico" href="/static/img/report.ico" />
+    <link rel="shortcut icon" href="/static/img/report.ico" />
+    <link href="/static/css/jquery-ui.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="/static/css/daterangepicker.css" />
+{% endblock %}
+
+{% block content %}
+<section class="date_selection">
+    <div class="row">
+        <div class="span10" style="padding-left: 20px;">
+            <div class="row">
+                <div class="btn-group col-lg-4">
+                    <div class="col-lg-3">Project:</div>
+                    <div class="col-lg-9">
+                        <select id="project_select" class="form-control">
+                            {% for project in projects %}
+                            <option value="{{ project.id }}">{{ project.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="btn-group col-lg-4">
+                    <div class="col-lg-3">Date Range:</div>
+                    <div class="col-lg-9">
+                        <input type="text" class="form-control" style="display: inline-block; width: 200px;" placeholder="Date Range" value="{{ start }} - {{ end }}" id="date_range" />
+                        <button type="button" id="generate_btn" class="btn btn-success" style="margin-left: 20px;">Generate</button>
+                    </div>
+                </div>
+                <div class="col-lg-4">
+
+
+                </div>
+            </div>
+            <br />
+            <div class="row" style="margin-left: 0px;">
+                <div class="col-lg-2">
+                    Users:<br />
+                    <div id="user_list" class="form-control" style="padding-left: 5px; max-height: 500px; height: auto; overflow-y: auto;">
+                        User list loading...
+                    </div>
+                    <br />
+                    <button type="button" id="select_all_btn">Select All</button>
+                    <button type="button" id="deselect_all_btn" style="float: right;">Deselect All</button>
+                    <br /><br />
+                </div>
+
+                <div class="col-lg-9"">
+                    <div id="chart"></div>
+                </div>
+            </div>
+    </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block js_body %}
+	<script src="/static/js/jquery-ui.js" integrity="sha256-0YPKAwZP7Mp3ALMRVB2i8GXeEndvCq3eSl/WsAl1Ryk=" crossorigin="anonymous"></script>
+    <script language="JavaScript" src="/static/js/highcharts.js"></script>
+    <script language="JavaScript" src="/static/js/moment.min.js"></script>
+    <script language="JavaScript" src="/static/js/daterangepicker.js"></script>
+    <script language="JavaScript" src="/static/js/projecthours.js"></script>
+	<script language="javascript">
+        $(document).ready(function(){
+            UpdateUserList();
+
+             $('#date_range').daterangepicker({
+                       drops: 'down'
+                   });
+
+            // if the user clicks on the "select all" button, make sure all available users are selected
+             $('#select_all_btn').click(function(){
+                $('[data-type="user-option"]').each(function(){
+                    $(this).prop("checked", true);
+                }) ;
+             });
+
+             // if the user clicks on the "deselect all" button, make sure all available users are NOT selected
+             $('#deselect_all_btn').click(function(){
+                $('[data-type="user-option"]').each(function(){
+                    $(this).prop("checked", false);
+                }) ;
+             });
+
+             // if the user clicks on the "Generate" button, go get some new data!
+             $('#generate_btn').click(function(){
+                 UpdateData();
+             });
+
+             // if the user changes the project, update the user list
+            $('#project_select').on('change', function(){
+                UpdateUserList();
+            });
+        });
+	</script>
+{% endblock %}
