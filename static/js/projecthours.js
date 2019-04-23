@@ -21,7 +21,7 @@ function UpdateData(){
 
     // make the call
     $.ajax({
-        url: '/project_hour_entries',
+        url: '../project_hour_entries',
         data: {
             project: $('#project_select').val(),
             start: start_range,
@@ -104,7 +104,7 @@ function GenerateChart(data){
 function UpdateUserList(){
     // get a list of users who have hours logged for this project
     $.ajax({
-        url: '/get_users_for_project',
+        url: '../get_users_for_project',
         data: {
             project: $('#project_select').val()
         },
