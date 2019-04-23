@@ -58,7 +58,10 @@ function SetupChart(data, title)
 
 	for(var i = 0; i < entries.length; i++)
 	{
-		var entry = new Array(entries[i].name, ((entries[i].hours / total) * 100), entries[i].hours);
+		var entry = {
+			name: entries[i].name,
+			y: entries[i].hours
+		}; //new Array(entries[i].name, ((entries[i].hours / total) * 100), entries[i].hours);
 		data_list.push(entry);
 	}
 
@@ -95,7 +98,7 @@ function SetupChart(data, title)
 					enabled: true,
 					color: '#000000',
 					connectorColor: '#000000',
-					format: '<b>{point.name}</b>: {point.percentage:.1f} %'
+					format: '<b>{point.name}</b>: {point.y} hours ({point.percentage:.1f} %)'
 				}
 			}
 		},

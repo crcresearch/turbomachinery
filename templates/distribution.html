@@ -110,7 +110,10 @@
 
         		for(var i = 0; i < entries.length; i++)
         		{
-        		        var entry = new Array(entries[i].name, ((entries[i].hours / total) * 100), entries[i].hours);
+        		        var entry = {
+        		            name: entries[i].name,
+                            y: entries[i].hours
+                        };//new Array(entries[i].name, ((entries[i].hours / total) * 100), entries[i].hours);
         		        data_list.push(entry);
         		}
 
@@ -129,13 +132,13 @@
 		                },
         	        	tooltip: {
 					formatter: function(){
-						for(var i = 0; i < data_list.length; i++)
-						{
-							if(data_list[i][0] == this.point.name)
-								return '<b>'+this.point.name + ':</b> ' + parseFloat(Math.round(data_list[i][1] * 100)/100).toFixed(1) + '%<br>'+data_list[i][2]+' hours';
-						}
-						return this.point.name + ': '+this.point.percentage + '%';
-					}
+                                for(var i = 0; i < data_list.length; i++)
+                                {
+                                    if(data_list[i][0] == this.point.name)
+                                        return '<b>'+this.point.name + ':</b> ' + parseFloat(Math.round(data_list[i][1] * 100)/100).toFixed(1) + '%<br>'+data_list[i][2]+' hours';
+                                }
+                                return this.point.name + ': '+this.point.percentage + '%';
+                            }
                 	        	//pointFormat: '{series.name}: <b>{point.percentage:.1f}%</b> - {series[2]}'
 	                	},
                 		plotOptions:{
@@ -146,7 +149,7 @@
                                         		enabled: true,
                                         		color: '#000000',
                                         		connectorColor: '#000000',
-                                	        	format: '<b>{point.name}</b>: {point.percentage:.1f} %'
+                                	        	format: '<b>{point.name}</b>: {point.y} hours ({point.percentage:.1f}%)'
                         	        	}
                         		}
                 		},
