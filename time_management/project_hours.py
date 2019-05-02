@@ -7,7 +7,7 @@ from django.db import connection
 
 def project_hours_page(request):
     cursor = connection.cursor()
-    cursor.execute("SELECT id, name FROM projects ORDER BY name;")
+    cursor.execute("SELECT id, name FROM projects WHERE status = 1 ORDER BY name;")
 
     project_list = []
     for p in cursor.fetchall():
