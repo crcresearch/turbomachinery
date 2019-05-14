@@ -110,7 +110,7 @@ function init()
 				entry.date = $('#entry_date_new_'+new_entry).val();
 				entry.hours = $('#entry_hours_new_'+new_entry).val();
 				entry.comments = $('#comment_new_'+new_entry).val();
-				entry.issue = $('#issue_new_'+new_entry).val();
+				// entry.issue = $('#issue_new_'+new_entry).val();
 				entry.activity = $('#activity_new_'+new_entry).val();
 				entry.logas = $('#logas_new_'+new_entry).val();
 			}
@@ -122,7 +122,7 @@ function init()
 				entry.date = $('#entry_date_'+UpdateEntries[i]).val();
 				entry.hours = $('#entry_hours_'+UpdateEntries[i]).val();
 				entry.comments = $('#comment_'+UpdateEntries[i]).val();
-				entry.issue = $('#issue_'+UpdateEntries[i]).val();
+				// entry.issue = $('#issue_'+UpdateEntries[i]).val();
 				entry.activity = $('#activity_'+UpdateEntries[i]).val();
 				entry.logas = $('#logas_'+UpdateEntries[i]).val();
 			}
@@ -425,7 +425,8 @@ function GetEntries()
 				proj.id = 'project_'+entries[i].id;
 				proj.className = 'project_select';
                 $(proj).addClass('form-control');
-			
+                $(proj_cell).addClass('col-lg-2');
+
 				// options...
 				for(var j = 0; j < data.projects.length; j++)
 				{
@@ -487,6 +488,8 @@ function GetEntries()
 				day.className = "entry_date";
 				day.value = entries[i].date;
 				day.id = "entry_date_"+entries[i].id;
+				$(day_cell).addClass("col-lg-1");
+				$(day).addClass("form-control");
 
 				// add it to the div
                 $(day_cell).append(day);
@@ -500,10 +503,14 @@ function GetEntries()
 				hours.className = "entry_hours";
 				hours.value = entries[i].hours;
 				hours.id = "entry_hours_"+entries[i].id;
-			
+				// $(hours).css('width', '50px');
+				$(hours).addClass('form-control');
+
 				// add it to the div
                 $(hours_cell).append(hours);
+                $(hours_cell).addClass("col-lg-1");
 				$(div).append(hours_cell);
+
 
 
 				//----------- Comments ------------//
@@ -513,40 +520,44 @@ function GetEntries()
 				comments.className = "comment";
 				comments.value = entries[i].comments;
 				comments.id = "comment_"+entries[i].id;
-			
+				$(comments).css('width', '100%');
+				$(comments).addClass('form-control');
+
 				// add it to the div
                 $(comments_cell).append(comments);
+                $(comments_cell).addClass("col-lg-3");
 				$(div).append(comments_cell);
 	
 				
 				//----------- Issue ------------//
-                var issue_cell = document.createElement("td");
-				var issue = document.createElement("INPUT");
-				issue.type = "text";
-				issue.className = "entry_issue";
-				issue.value = entries[i].issue;
-				issue.id = "issue_"+entries[i].id;
-			
-				// add it to the div
-                $(issue_cell).append(issue);
-				$(div).append(issue_cell);
+                // var issue_cell = document.createElement("td");
+				// var issue = document.createElement("INPUT");
+				// issue.type = "text";
+				// issue.className = "entry_issue";
+				// issue.value = entries[i].issue;
+				// issue.id = "issue_"+entries[i].id;
+                //
+				// // add it to the div
+                // $(issue_cell).append(issue);
+				// $(div).append(issue_cell);
 		
 
 				//----------- Issue Link -------//
-				var link = document.createElement("SPAN");
-				link.className = "issue_link";
-				if(issue.value != '')
-					link.innerHTML = '<a href="https://redmine.crc.nd.edu/redmine/issues/'+entries[i].issue+'" target="_blank">&rarr;</a>';
-				
-				// add it to the div
-                $(issue_cell).append(link);
+				// var link = document.createElement("SPAN");
+				// link.className = "issue_link";
+				// if(issue.value != '')
+				// 	link.innerHTML = '<a href="https://redmine.crc.nd.edu/redmine/issues/'+entries[i].issue+'" target="_blank">&rarr;</a>';
+				//
+				// // add it to the div
+                // $(issue_cell).append(link);
 
 				//------------ Activity ------------//
                 var activity_cell = document.createElement("td");
 				var act = document.createElement("SELECT");
 				act.id = "activity_"+entries[i].id;
 				act.className = "activity_select";
-			
+				$(act).addClass("form-control");
+
 				// options...get the activities of the given project
 				//
 				for(var j = 0; j < data.activities.length; j++)
@@ -566,6 +577,7 @@ function GetEntries()
 				
 				// add the activity drop-down to our div
                 $(activity_cell).append(act);
+				$(activity_cell).addClass("col-lg-2");
 				$(div).append(activity_cell);
 		
 				//--------- Log As ----------------//
@@ -573,6 +585,7 @@ function GetEntries()
 				var logas = document.createElement("SELECT");
 				logas.id = "logas_"+entries[i].id;
 				logas.className = "logas_select";
+				$(logas).addClass("form-control");
 
 				// options...
 				for(var j = 0; j < LOGAS_LIST.length; j++)
@@ -591,6 +604,7 @@ function GetEntries()
 
 				// add the "log as" drop-down to our div
                 $(logas_cell).append(logas);
+				$(logas_cell).addClass("col-lg-2");
 				$(div).append(logas_cell);
 
 
@@ -603,6 +617,7 @@ function GetEntries()
 			
 				// add the delete button to our div
                 $(delete_cell).append(del);
+                $(delete_cell).addClass('col-lg-1');
 				$(div).append(delete_cell);
 
 				// add this div to our project list
@@ -656,12 +671,6 @@ function SetupEntries()
         });
 	// for comments
 	$('.comment').each(function(){
-                $(this).change(function(){
-                        EntryChanged(this.parentNode.parentNode.id.split('_')[1]);
-                });
-        });
-	// for issues
-	$('.entry_issue').each(function(){
                 $(this).change(function(){
                         EntryChanged(this.parentNode.parentNode.id.split('_')[1]);
                 });
@@ -803,6 +812,7 @@ function AddEntry()
 	hours.className = "entry_hours";
 	$(hours).addClass('form-control');
 	hours.value = '';
+	// $(hours).css("width", "50px");
 	hours.id = "entry_hours_new_"+UpdateEntries.length;
 		
 	// add it to the div
@@ -823,24 +833,24 @@ function AddEntry()
 	$(div).append(comments_cell);
 					
 	//----------- Issue ------------//
-    var issue_cell = document.createElement("th");
-	var issue = document.createElement("INPUT");
-	issue.type = "text";
-	issue.className = "entry_issue";
-	$(issue).addClass('form-control');
-	issue.value = '';
-	issue.id = "issue_new_"+UpdateEntries.length;
-	
-	// add it to the div
-    $(issue_cell).append(issue);
-	$(div).append(issue_cell);
-	
-	// empty issue link (to keep things lined up)
-	var link = document.createElement("SPAN");
-	link.className = "issue_link";
-				
-	// add it to the div
-	$(issue_cell).append(link);
+    // var issue_cell = document.createElement("th");
+	// var issue = document.createElement("INPUT");
+	// issue.type = "text";
+	// issue.className = "entry_issue";
+	// $(issue).addClass('form-control');
+	// issue.value = '';
+	// issue.id = "issue_new_"+UpdateEntries.length;
+	//
+	// // add it to the div
+    // $(issue_cell).append(issue);
+	// $(div).append(issue_cell);
+	//
+	// // empty issue link (to keep things lined up)
+	// var link = document.createElement("SPAN");
+	// link.className = "issue_link";
+	//
+	// // add it to the div
+	// $(issue_cell).append(link);
 
 	//------------ Activity ------------//
     var activity_cell = document.createElement("th");
