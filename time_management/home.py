@@ -144,10 +144,10 @@ def get_entries_home(request):
     # round support hours
     support = round(support, 2)
 
-    # get a list of all projects this user is a member of
+    # get a list of all projects this user is a member of (active only!)
     cur.execute(
         "SELECT projects.id, projects.name FROM projects INNER JOIN members ON projects.id = members.project_id "
-        "INNER JOIN users ON users.id = members.user_id WHERE users.login = '%(user)s' ORDER BY projects.name;" % {
+        "INNER JOIN users ON users.id = members.user_id WHERE users.login = '%(user)s' AND projects.status = 1 ORDER BY projects.name;" % {
             'user': target})
     projects = cur.fetchall()
 
@@ -184,7 +184,8 @@ def get_entries_home(request):
             activity_list.append(active)
         new_project['activities'] = activity_list
 
-        project_list.append(new_project)
+        if new_project not in project_list:
+            project_list.append(new_project)
 
     # get a list of activities
     cur.execute(
