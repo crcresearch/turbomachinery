@@ -1,0 +1,5 @@
+{% for user in users %}
+    <input type="checkbox" checked id="user_{{ user.id }}" value="{{ user.id }}" data-type="user-option"/>
+    <label for="user_{{ user.id }}">{{ user.name }}</label>
+    <br />
+{% endfor %}

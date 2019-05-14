@@ -198,6 +198,10 @@ var EXPECTED_BILLABLE = '';
 
 function GetEntries()
 {
+    // make sure to clear out any open dialogs
+    $('.ui-dialog').each(function(){
+        $(this).remove();
+    });
 
     $('#status_update').html("Getting time entries...");
     $('#calendar').fullCalendar('destroy');
@@ -254,6 +258,10 @@ function GetEntries()
             $('#calendar').fullCalendar({
                 defaultDate: default_date,
                  eventClick: function(event, jsEvent, view) {
+                    // make sure to clear out any open dialogs
+    $('.ui-dialog').each(function(){
+        $(this).remove();
+    });
                      // fill in our activities
                      $.ajax({
                             url: '../get_activities',

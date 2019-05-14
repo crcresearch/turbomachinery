@@ -7,6 +7,7 @@
     <link rel='icon' type="image/ico" href="/static/img/report.ico" />
     <link rel="shortcut icon" href="/static/img/report.ico" />
     <link href="/static/css/jquery-ui.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="/static/css/daterangepicker.css" />
 {% endblock %}
 
 {% block content %}
@@ -25,24 +26,28 @@
             </div>
             {%  endif %}
 
-            <div class="btn-group">
-                <a class="btn dropdown-toggle" data-toggle="dropdown" href="#">
-                    <span id="month_name" val="">Month</span>
-                    <span class="caret"></span>
-                </a>
-                <ul class="dropdown-menu" id="month_dropdown">
+        <div class="btn-group" style="width: 400px;">
+            <input type="text" class="form-control" style="display: inline-block; width: 60%;" placeholder="Date Range" value="{{ start }} - {{ end }}" id="date_range" />
+        </div>
 
-                </ul>
-            </div>
-            <div class="btn-group">
-                <a class="btn dropdown-toggle" data-toggle="dropdown" href="#">
-                    <span id="year_name" val="">Year</span>
-                    <span class="caret"></span>
-                </a>
-                <ul class="dropdown-menu" id="year_dropdown">
-
-                </ul>
-            </div>
+{#            <div class="btn-group">#}
+{#                <a class="btn dropdown-toggle" data-toggle="dropdown" href="#">#}
+{#                    <span id="month_name" val="">Month</span>#}
+{#                    <span class="caret"></span>#}
+{#                </a>#}
+{#                <ul class="dropdown-menu" id="month_dropdown">#}
+{##}
+{#                </ul>#}
+{#            </div>#}
+{#            <div class="btn-group">#}
+{#                <a class="btn dropdown-toggle" data-toggle="dropdown" href="#">#}
+{#                    <span id="year_name" val="">Year</span>#}
+{#                    <span class="caret"></span>#}
+{#                </a>#}
+{#                <ul class="dropdown-menu" id="year_dropdown">#}
+{##}
+{#                </ul>#}
+{#            </div>#}
         </div>
     </div>
         <!-- <img src="/reports/media/img/list.png" title="Switch to List View" id="list_link" class="list_link"/>
@@ -103,8 +108,16 @@
 
 {% block js_body %}
 	<script src="/static/js/jquery-ui.js" integrity="sha256-0YPKAwZP7Mp3ALMRVB2i8GXeEndvCq3eSl/WsAl1Ryk=" crossorigin="anonymous"></script>
+    <script language="JavaScript" src="/static/js/moment.min.js"></script>
+    <script language="JavaScript" src="/static/js/daterangepicker.js"></script>
 	<script language="javascript" src='/static/js/manage.js'></script>
 	<script language="javascript">
+    $('#date_range').daterangepicker({
+                   drops: 'down'
+               }).on('apply.daterangepicker', function(ev, picker){
+                GetEntries();
+               });
+
 		init();
 
 		// highlight the tab we're on
