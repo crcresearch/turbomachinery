@@ -30,7 +30,7 @@
             <li><a href="{% url 'project_hours' %}">Project Hours</a></li>
         {% endif %}
 
-        {% if user.is_superuser %}
+        {% if user.is_staff %}
         <li><a href="{% url 'team_management' %}">Team Management</a></li>
         {% endif %}
         </ul>
