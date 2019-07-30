@@ -12,7 +12,8 @@ from email.mime.application import MIMEApplication
 import smtplib
 
 
-REPORT_TO_LIST = ['Beata.Nabrzyska.1@nd.edu', 'Jessica.Reyes.50@nd.edu']
+REPORT_TO_LIST = ['Beata.Nabrzyska.1@nd.edu']
+#REPORT_TO_LIST = ['dpettifo@nd.edu']
 
 class Command(BaseCommand):
     help = 'Generates a PDF report of individuals who fall under their minimum required hours and sends them out to the list of supervisors.'
@@ -78,7 +79,7 @@ class Command(BaseCommand):
         part['Content-Disposition'] = 'attachment; filename="%s"' % os.path.basename(pdf_file_name)
         msg.attach(part)
 
-        smtp = smtplib.SMTP('localhost')
+        smtp = smtplib.SMTP('dockerhost')
         smtp.sendmail('noreply@turbo.crc.nd.edu', REPORT_TO_LIST, msg.as_string())
 
         smtp.close()
@@ -91,7 +92,7 @@ def get_offending_users():
     dateframe = get_last_date_range()
 
     # get a list of all users which have supervisors
-    connection = psycopg2.connect(database='redmine_default', user='redmine_system', password='Lets go turbo!')
+    connection = psycopg2.connect(host='database1', database='redmine', user='postgres', password="Let's go turbo!")
     cursor = connection.cursor()
 
     # get the custom field id for supervisor lists
