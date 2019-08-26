@@ -1,4 +1,4 @@
-from django.core.management.base import BaseCommand, CommandError
+from django.core.management.base import BaseCommand, CommandError 
 import datetime
 import psycopg2
 import smtplib
@@ -16,7 +16,7 @@ class Command(BaseCommand):
         dateframe = get_last_date_range()
 
         # get a list of all users which have supervisors
-        connection = psycopg2.connect(database='redmine_default', user='redmine_system', password='Lets go turbo!')
+        connection = psycopg2.connect(host='database1', database='redmine', user='postgres', password="Let's go turbo!")
         cursor = connection.cursor()
 
         # get the custom field id for supervisor lists
@@ -136,6 +136,6 @@ def send_notification(to_email, cc_list, message_body, message_subject):
 
     # Send the message via our own SMTP server, but don't include the
     # envelope header.
-    s = smtplib.SMTP('localhost')
+    s = smtplib.SMTP('dockerhost')
     s.sendmail('noreply@turbo.crc.nd.edu', list_of_recipients, msg.as_string())
     s.quit()
