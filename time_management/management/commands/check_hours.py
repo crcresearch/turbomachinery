@@ -83,17 +83,27 @@ class Command(BaseCommand):
                     continue
                 # print "Sending email to", user[0], "for low hours:", hours
 
+                if options['type'] == 'saturday_morning':
+                    print "sending email to", email_address, "for", hours, "<", hours_required
+                    print supervisor_list
+                    message = open('/opt/turbomachinery/templates/notification_emails/saturday_morning.html', 'r').read()
+                    send_notification(email_address, None, message, 'Redmine: Low Hours Reminder')
+
                 if options['type'] == 'monday_morning':
                     print "sending email to", email_address, "for", hours, "<", hours_required
                     print supervisor_list
-                    #message = open('/opt/turbomachinery/templates/notification_emails/monday_morning.html', 'r').read()
-                    #send_notification(email_address, None, message, 'Redmine: Low Hours Reminder')
+                    message = open('/opt/turbomachinery/templates/notification_emails/monday_morning.html', 'r').read()
+                    send_notification(email_address, None, message, 'Redmine: Low Hours Reminder')
 
                 if options['type'] == 'monday_afternoon':
+                    print "sending email to", email_address, "for", hours, "<", hours_required
+                    print supervisor_list
                     message = open('/opt/turbomachinery/templates/notification_emails/monday_afternoon.html', 'r').read()
                     send_notification(email_address, supervisor_list, message, 'Redmine: Low Hours Reminder')
 
                 if options['type'] == 'tuesday_morning':
+                    print "sending email to", email_address, "for", hours, "<", hours_required
+                    print supervisor_list
                     message = open('/opt/turbomachinery/templates/notification_emails/tuesday_morning.html', 'r').read()
                     send_notification(email_address, supervisor_list, message, 'Redmine: Low Hours Reminder')
 
