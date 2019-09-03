@@ -146,8 +146,11 @@ def get_entries_home(request):
 
     # get a list of all projects this user is a member of (active only!)
     cur.execute(
-        "SELECT projects.id, projects.name FROM projects INNER JOIN members ON projects.id = members.project_id "
-        "INNER JOIN users ON users.id = members.user_id WHERE users.login = '%(user)s' AND projects.status = 1 ORDER BY projects.name;" % {
+        "SELECT projects.id, projects.name, projects.status FROM projects WHERE (\
+            projects.id in (SELECT members.project_id FROM members INNER JOIN users ON users.id = members.user_id WHERE users.login = '%(user)s')) \
+                OR \
+            (projects.id in (select distinct(project_id) from time_entries INNER JOIN users ON users.id = time_entries.user_id WHERE users.login  = '%(user)s'))\
+         ORDER BY projects.name;" % {
             'user': target})
     projects = cur.fetchall()
 
@@ -157,6 +160,20 @@ def get_entries_home(request):
         new_project = {}
         new_project['id'] = project[0]
         new_project['name'] = project[1]
+        new_project['active'] = project[2]
+
+        # check if the user is a member of this project
+        cur.execute("SELECT count(*) from members INNER JOIN users ON users.id = members.user_id WHERE project_id = %(project)s and users.login = '%(user)s';" % {
+            'user': target,
+            'project': project[0]
+        })
+
+        members = cur.fetchone()[0]
+        if members == 1:
+            new_project['member'] = True
+        else:
+            new_project['member'] = False
+
         # for each project, get a list of activities!
         # first get any that are specific to our project
         cur.execute(

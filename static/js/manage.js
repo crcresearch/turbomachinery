@@ -434,6 +434,10 @@ function GetEntries()
 					var option = document.createElement("OPTION");
 					option.value = data.projects[j].id;
 					option.innerHTML = data.projects[j].name;
+
+					if(data.projects[j].member == false || data.projects[j].active != 1){
+						$(option).attr('disabled', 'disabled');
+					}
 				
 					// if this project is the same that our entry is assigned to, select it.
 					if(option.value == entries[i].project)
@@ -738,6 +742,10 @@ function AddEntry()
 		var option = document.createElement("OPTION");
 		option.value = PROJECT_LIST[j].id;
 		option.innerHTML = PROJECT_LIST[j].name;
+
+		if(PROJECT_LIST[j].member == false || PROJECT_LIST[j].active != 1){
+			$(option).attr('disabled', 'disabled');
+		}
 		
 		// add this option to our select
 		$(proj).append(option);
