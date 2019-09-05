@@ -206,11 +206,11 @@ def update_entries(request):
 
         if entry['id'] == 'new_entry':
             query = "INSERT INTO custom_values (customized_id, custom_field_id, value, customized_type) " \
-                    "VALUES (%(id)s, (SELECT id FROM custom_fields WHERE lower(name) like '%%log%%as%%'), '%(value)s', 'TimeEntry');" % {
+                    "VALUES (%(id)s, (SELECT id FROM custom_fields WHERE lower(name) like '%%task%%'), '%(value)s', 'TimeEntry');" % {
                         'id': timeid, 'value': entry['logas']}
         else:
             query = "UPDATE custom_values SET value = '%(value)s' WHERE customized_id = %(id)s " \
-                    "AND custom_field_id = (select id from custom_fields where lower(name) like '%%log%%as%%') " \
+                    "AND custom_field_id = (select id from custom_fields where lower(name) like '%%task%%') " \
                     "AND customized_type = 'TimeEntry';" % {
                         'id': entry['id'], 'value': entry['logas']}
         cur.execute(query)
