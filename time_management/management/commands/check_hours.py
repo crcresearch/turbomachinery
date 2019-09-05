@@ -87,13 +87,13 @@ class Command(BaseCommand):
                     print "sending email to", email_address, "for", hours, "<", hours_required
                     print supervisor_list
                     message = open('/opt/turbomachinery/templates/notification_emails/saturday_morning.html', 'r').read()
-                    send_notification(email_address, None, message, 'Redmine: Low Hours Reminder')
+                    send_notification(email_address, supervisor_list, message, 'Redmine: Low Hours Reminder')
 
                 if options['type'] == 'monday_morning':
                     print "sending email to", email_address, "for", hours, "<", hours_required
                     print supervisor_list
                     message = open('/opt/turbomachinery/templates/notification_emails/monday_morning.html', 'r').read()
-                    send_notification(email_address, None, message, 'Redmine: Low Hours Reminder')
+                    send_notification(email_address, supervisor_list, message, 'Redmine: Low Hours Reminder')
 
                 if options['type'] == 'monday_afternoon':
                     print "sending email to", email_address, "for", hours, "<", hours_required
