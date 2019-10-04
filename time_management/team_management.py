@@ -21,8 +21,8 @@ def get_team_list():
 
     # for each manager, get a list of team members
     team_list = []
-    member_ids = []
     for team in teams:
+        member_ids = []
         team_manager = team.manager
         members = TeamMember.objects.filter(team=team)
 
