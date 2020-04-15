@@ -11,6 +11,9 @@ https://docs.djangoproject.com/en/1.10/ref/settings/
 """
 
 import os
+# from os import environ as ENV
+import environ
+ENV = environ.Env()
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -40,7 +43,8 @@ INSTALLED_APPS = [
     'django_extensions',
     #'skillsmatrix.apps.SkillsmatrixConfig',
     # used on prod for CAS authentication
-    # 'cas'
+    #'cas'
+    'mozilla_django_oidc',
 ]
 
 MIDDLEWARE_CLASSES = [
@@ -52,7 +56,7 @@ MIDDLEWARE_CLASSES = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     # used on prod for CAS authentication
-    # 'cas.middleware.CASMiddleware',
+    #'cas.middleware.CASMiddleware',
 ]
 
 
@@ -110,6 +114,10 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+# Email settings.
+EMAIL_BACKEND = ENV('DJANGO_EMAIL_BACKEND', default='django.core.mail.backends.console.EmailBackend')
+EMAIL_HOST = ENV('DJANGO_EMAIL_HOST', default='localhost')
+EMAIL_PORT = ENV('DJANGO_EMAIL_PORT', default='25')
 
 # Internationalization
 # https://docs.djangoproject.com/en/1.10/topics/i18n/
