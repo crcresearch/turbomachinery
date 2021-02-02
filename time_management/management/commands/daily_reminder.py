@@ -24,19 +24,20 @@ class Command(BaseCommand):
         connection = psycopg2.connect(host='database1', database='redmine', user='postgres', password="Let's go turbo!")
         cursor = connection.cursor()
 
-        cursor.execute("SELECT address FROM email_addresses;")
+        cursor.execute("SELECT address FROM email_addresses where address = 'dpettifo@nd.edu';")
         addresses = cursor.fetchall()
 
         for address in addresses:
+            print "Sending to", address[0]
             msg = MIMEMultipart()
             msg['From'] = 'noreply@turbo.crc.nd.edu'
-            msg['To'] = [address[0]]
+            msg['To'] = address[0]
             msg['Subject'] = 'Did you log your time in Redmine yesterday?'
 
             msg.attach(MIMEText(email_content, 'html'))
 
             smtp = smtplib.SMTP('dockerhost')
-            smtp.sendmail('noreply@turbo.crc.nd.edu', [address[0]], msg.as_string())
+            smtp.sendmail('noreply@turbo.crc.nd.edu', address[0], msg.as_string())
 
             smtp.close()
 
