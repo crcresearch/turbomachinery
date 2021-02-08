@@ -24,7 +24,7 @@ class Command(BaseCommand):
         connection = psycopg2.connect(host='database1', database='redmine', user='postgres', password="Let's go turbo!")
         cursor = connection.cursor()
 
-        cursor.execute("SELECT address FROM email_addresses where address = 'dpettifo@nd.edu';")
+        cursor.execute("SELECT address FROM email_addresses;")
         addresses = cursor.fetchall()
 
         for address in addresses:
