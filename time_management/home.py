@@ -44,7 +44,7 @@ def get_entries_home(request):
         if target_user.id in user_list:
             target = request.GET['target']
 
-    if request.user.is_staff:
+    if request.user.is_staff and 'target' in request.GET and request.GET['target'] != '':
         target = request.GET['target']
 
     # if request.user.is_staff and 'target' in request.GET and request.GET['target'] != '':
