@@ -17,7 +17,7 @@ def calendar_home(request):
     else:
         user_list = get_user_list(username=request.user.username, as_json=True)
 
-    print "ENTRIES:", type(user_list)
+    print ("ENTRIES:", type(user_list))
 
     if len(user_list) > 1:
         users = user_list

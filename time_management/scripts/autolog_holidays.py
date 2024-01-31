@@ -9,7 +9,7 @@ import psycopg2
 
 
 def log_holiday(date, name):
-    print "Connecting..."
+    print ("Connecting...")
     connection = psycopg2.connect(
         host='localhost',
         user='redmine_system',
@@ -63,5 +63,5 @@ if __name__ == '__main__':
     else:
         for date in holidays:
             if datetime.datetime.now().date() == date['date']:
-                print "Logging time for:", date['name']
+                print ("Logging time for:", date['name'])
                 log_holiday(date['date'], date['name'])

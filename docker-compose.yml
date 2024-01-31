@@ -3,7 +3,15 @@ version: '3.0'
 services:
 
   django:
+    build:
+      context: .
+      dockerfile: ./docker_django/Dockerfile
     image: turbo_django:latest
+    ports:
+      - 8000:8000
+    env_file:
+      - config/db/database1_env
+    container_name: turbo_django
 #    restart: always
     volumes:
         - .:/code/

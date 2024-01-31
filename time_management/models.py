@@ -29,15 +29,15 @@ class RedmineUser(models.Model):
 
 
 class Team(models.Model):
-    manager = models.ForeignKey(RedmineUser, related_name='redmineuser_manager')
+    manager = models.ForeignKey(RedmineUser, related_name='redmineuser_manager', on_delete=models.CASCADE)
 
     def __unicode__(self):
         return str(self.manager)
 
 
 class TeamMember(models.Model):
-    team = models.ForeignKey(Team, related_name='team_teammember', null=True, blank=True)
-    member = models.ForeignKey(RedmineUser, related_name='redmineuser_teammember')
+    team = models.ForeignKey(Team, related_name='team_teammember', null=True, blank=True, on_delete=models.CASCADE)
+    member = models.ForeignKey(RedmineUser, related_name='redmineuser_teammember', on_delete=models.CASCADE)
 
     def __unicode__(self):
         return str(self.team) + ': ' + str(self.member)

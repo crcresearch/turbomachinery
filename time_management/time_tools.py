@@ -1,6 +1,6 @@
 import datetime
 
-from holidays import get_holidays, get_working_days
+from time_management.holidays import get_holidays, get_working_days
 from time_management.models import Team, RedmineUser
 
 def get_monthly_expected(month=datetime.datetime.now().month, year=datetime.datetime.now().year):

@@ -2,7 +2,7 @@ import datetime
 from django.db import connection
 from django.shortcuts import HttpResponse
 from openpyxl import Workbook
-from holidays import get_holidays
+from time_management.holidays import get_holidays
 from django.contrib.auth.decorators import login_required
 
 

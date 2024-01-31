@@ -74,5 +74,5 @@ def add_supervisor_to_user(username, supervisor_email, custom_field_id, cursor):
         })
         return 1
     else:
-        print "\t...skipped", username, " --> ", supervisor_email, "(already in system)"
+        print ("\t...skipped", username, " --> ", supervisor_email, "(already in system)")
         return 0

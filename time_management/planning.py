@@ -5,7 +5,7 @@ from django.contrib.auth.decorators import login_required
 from django.db import connection
 from django.shortcuts import HttpResponse, render
 
-from time_tools import date_working_hours, manager_date_working_hours
+from time_management.time_tools import date_working_hours, manager_date_working_hours
 
 
 @login_required

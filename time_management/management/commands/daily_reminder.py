@@ -28,7 +28,7 @@ class Command(BaseCommand):
         addresses = cursor.fetchall()
 
         for address in addresses:
-            print "Sending to", address[0]
+            print ("Sending to", address[0])
             msg = MIMEMultipart()
             msg['From'] = 'noreply@turbo.crc.nd.edu'
             msg['To'] = address[0]

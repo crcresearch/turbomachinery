@@ -4,7 +4,7 @@ from django.db import connection
 import datetime
 import calendar  # used for converting month integers to text
 import csv
-import costs
+from time_management.costs import ServiceCost
 from django.contrib.auth.decorators import login_required
 from time_management.decorators import user_is_in_manager_group
 
@@ -161,7 +161,7 @@ def report_generator_home(request):
     else:
         required_list += 'NULL'
     required_list += ')'
-    print required_list
+    print (required_list)
 
     # gather a summation of all un-accounted hours that are not part of any of the projects we have listed
     today = datetime.date.today()
@@ -275,8 +275,8 @@ def generate_internal_report(request):
         required_list += project + ','
     required_list = required_list[:-1] + ')'
 
-    print required_list
-    print len(required_list.split(','))
+    print (required_list)
+    print (len(required_list.split(',')))
 
     # NOTE: Here is an explination of what should be gathered:
     #  Primary Comments: 		Project Name
@@ -296,7 +296,7 @@ def generate_internal_report(request):
     #  Line Item Assistant:		NetID of user
     #  Line Item Comments:		None
 
-    print len(project_list[0])
+    print (len(project_list[0]))
 
     if len(project_list[0]) != 0:
         # for each project in our list, gather all of the data we need!
@@ -377,7 +377,7 @@ def generate_internal_report(request):
                                               'end': request.GET['end']})
 
             times = cur.fetchall()
-            print "TIMES:", times
+            print("TIMES:", times)
             # print times
             # format of the "times":
             # times[0] = summation of hours
@@ -720,7 +720,7 @@ def generate_external_report(request):
     cur = connection.cursor()
 
     # grab all of our costs while we're at it
-    cost_lib = costs.ServiceCost()
+    cost_lib = ServiceCost()
 
     # prepare list for filtering
     required_list = '('
@@ -746,7 +746,7 @@ def generate_external_report(request):
     #  Line Item Assistant:		NetID of user
     #  Line Item Comments:		None
 
-    print len(project_list[0])
+    print (len(project_list[0]))
 
     if len(project_list[0]) != 0:
         # for each project in our list, gather all of the data we need!
@@ -760,7 +760,7 @@ def generate_external_report(request):
             for parent in project_list:
                 # add exception for HPC parent project
                 if str(parent_id) == str(parent):
-                    print 'Found in list...skipping'
+                    print ('Found in list...skipping')
                     found = True
             if found:
                 continue

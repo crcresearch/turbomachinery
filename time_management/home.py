@@ -1,7 +1,7 @@
 from django.shortcuts import HttpResponse, render
 from django.db import connection
 import datetime
-from holidays import get_holidays
+from time_management.holidays import get_holidays
 import calendar
 import json
 from django.contrib.auth.decorators import login_required
@@ -39,7 +39,7 @@ def get_entries_home(request):
     if 'target' in request.GET and request.GET['target'] != '' and request.GET['target'] != target and not request.user.is_staff:
         # make sure the target is in their manager's group
         user_list = get_user_list(username=request.user.username, as_json=True)
-        print "Looking for:", request.GET['target']
+        print ("Looking for:", request.GET['target'])
         target_user = RedmineUser.objects.get(login=request.GET['target'])
         if target_user.id in user_list:
             target = request.GET['target']
@@ -95,18 +95,19 @@ def get_entries_home(request):
         "AND users.login = '%(user)s' ORDER BY %(order)s;" % {
             'start': start, 'end': end, 'user': target, 'order': order_by})
 
-    print cur.mogrify( "SELECT time_entries.id, time_entries.project_id, projects.name, time_entries.issue_id, time_entries.hours, "
+    print(cur.mogrify(
+        "SELECT time_entries.id, time_entries.project_id, projects.name, time_entries.issue_id, time_entries.hours, "
         "time_entries.comments, enumerations.name, time_entries.spent_on, custom_values.value, enumerations.id, "
         "projects.id FROM time_entries INNER JOIN custom_values ON custom_values.customized_id = time_entries.id "
         "INNER JOIN users ON users.id = time_entries.user_id "
         "INNER JOIN projects ON projects.id = time_entries.project_id "
         "INNER JOIN enumerations ON enumerations.id = time_entries.activity_id WHERE "
         "AND custom_values.value != '' and time_entries.spent_on >= '%(start)s' and time_entries.spent_on <= '%(end)s' "
-                       "AND users.login = '%(user)s' ORDER BY %(order)s;" % {
-            'start': start, 'end': end, 'user': target, 'order': order_by})
+        "AND users.login = '%(user)s' ORDER BY %(order)s;" % {
+            'start': start, 'end': end, 'user': target, 'order': order_by}))
 
     entries = cur.fetchall()
-    print entries
+    print (entries)
 
     # assemble into a list
     entry_list = []
@@ -594,7 +595,7 @@ def get_distribution(request):
         # set the id to the user's ID
         redmine_user = RedmineUser.objects.get(login=request.user.username)
         id = redmine_user.id
-    print id
+    print (id)
 
     # first check to make sure we have all we need
     # do we have a date range?
@@ -732,7 +733,7 @@ def get_all_distribution(request):
     else:
         # get a list of users this person should be able to see (if manager, their team[s])
         user_id_list = get_user_list(request.user.username, include_manager=include_manager)
-        print "User list:", user_id_list
+        print ("User list:", user_id_list)
         cur.execute("SELECT distinct(projects.id), projects.name, parent_id FROM projects "
                     "INNER JOIN members ON projects.id = members.project_id "
                     "INNER JOIN users ON users.id = members.user_id "
@@ -886,7 +887,7 @@ def get_all_distribution(request):
             for sub_project in parent['subprojects']:
                 sub_project['percent'] = (float(sub_project['total_hours']) / float(total_hours) * 100.0)
 
-            print parent['name'], parent['percent']
+            print (parent['name'], parent['percent'])
         else:
             parent['percent'] = 100.0
             for sub_project in parent['subprojects']:

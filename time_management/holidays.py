@@ -253,7 +253,7 @@ def get_average_day_hours(current_month, current_year, monthly_expected):
         working_days += get_working_days(current_date.month, current_date.year)
         current_date = current_date + relativedelta(months=1)
 
-    print working_days
+    print(working_days)
 
     avg_hours_per_day = float(avg_year) / float(working_days)
     return avg_hours_per_day
