@@ -1,8 +1,7 @@
-#!/bin/bash
+#!/bin/sh
 
-# call the python script that uses pyscopg2 to check for database connections
-# NOTE: we pass in "db" as a parameter since this is the hostname Docker sets for us (in the docker-compose.yml)
-python wait_for_postgres.py db
-
-# Execute anything in the "CMD" definition
-exec "$@"
+# wait until Postgres is ready
+while ! python /code/docker_django/wait_for_postgres.py localhost; do
+  echo "$(date) - waiting for Postgres..."
+  sleep 1
+done

@@ -56,7 +56,7 @@ services:
 
   database1:
 #    restart: always
-    image: postgres:10
+    image: postgres
     env_file:
       - config/db/database1_env
     networks:

@@ -12,7 +12,7 @@ while offline:
     try:
         # try to connect!  we don't care if the password is right, we're just checking to see if we can get
         #   Postgres to answer us back...
-        c = psycopg2.connect(host=sys.argv[1], database='postgres', user='postgres', password='invalid_password')
+        c = psycopg2.connect(host=sys.argv[1], database='postgres', user='postgres', password='Let\'s go turbo!')
 
         # if the above didn't fail, then we actually got the password right (oops), but it means we're online
         offline = False

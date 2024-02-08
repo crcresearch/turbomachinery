@@ -47,7 +47,7 @@ INSTALLED_APPS = [
     'mozilla_django_oidc',
 ]
 
-MIDDLEWARE_CLASSES = [
+MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -55,10 +55,7 @@ MIDDLEWARE_CLASSES = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    # used on prod for CAS authentication
-    #'cas.middleware.CASMiddleware',
 ]
-
 
 
 ROOT_URLCONF = 'pr.urls'
