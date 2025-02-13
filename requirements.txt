@@ -8,3 +8,5 @@ python-dateutil==2.7.3
 pytz==2018.4
 six==1.11.0
 typing==3.6.4
+django-environ>=0.4.5
+html2text==2019.8.11
