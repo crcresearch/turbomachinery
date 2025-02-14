@@ -4,6 +4,9 @@ services:
 
   django:
     image: turbo_django:latest
+    build:
+      context: .
+      dockerfile: ./docker_django/Dockerfile
 #    restart: always
     volumes:
         - .:/code/

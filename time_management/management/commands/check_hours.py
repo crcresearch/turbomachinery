@@ -5,6 +5,8 @@ import smtplib
 # Import the email modules we'll need
 from email.mime.text import MIMEText
 from django.shortcuts import render
+from django.core.mail import send_mail
+
 
 class Command(BaseCommand):
     help = 'Checks for low hours of the previous week'
@@ -132,7 +134,19 @@ def get_hours(user_id, start_date, end_date, cursor):
 
     return cursor.fetchone()[0]
 
-def send_notification(to_email, cc_list, message_body, message_subject):
+def send_notification(to_email, cc_list, message_body, message_subject):    
+    #if cc_list:
+    #    to_list = [to_email] + cc_list
+    #else:
+    #    to_list  = [to_email]
+
+    #send_email(
+    #	message_subject,
+    #	message_body,
+    #	'noreply@turbo.crc.nd.edu',
+    #	to_list,
+    #	fail_silently=False
+    #)
     msg = MIMEText(message_body, 'html')
 
     msg['Subject'] = message_subject
