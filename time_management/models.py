@@ -41,3 +41,44 @@ class TeamMember(models.Model):
 
     def __unicode__(self):
         return str(self.team) + ': ' + str(self.member)
+
+
+class TimeEntry(models.Model):
+    user = models.ForeignKey('RedmineUser', models.DO_NOTHING)
+    project = models.ForeignKey('Project', models.DO_NOTHING)
+    hours = models.DecimalField(max_digits=5, decimal_places=2)
+    comments = models.TextField(blank=True, null=True)
+    activity = models.ForeignKey('Enumeration', models.DO_NOTHING)
+    spent_on = models.DateField()
+    created_on = models.DateTimeField()
+    updated_on = models.DateTimeField()
+
+    class Meta:
+        managed = False
+        db_table = 'time_entries'
+
+
+class Project(models.Model):
+    name = models.CharField(max_length=255)
+    description = models.TextField(blank=True, null=True)
+    identifier = models.CharField(unique=True, max_length=255)
+    status = models.IntegerField()
+    
+    class Meta:
+        managed = False
+        db_table = 'projects'
+
+
+class Enumeration(models.Model):
+    name = models.CharField(max_length=30)
+    position = models.IntegerField(blank=True, null=True)
+    is_default = models.BooleanField()
+    type = models.CharField(max_length=255)
+    active = models.BooleanField()
+    project_id = models.IntegerField(blank=True, null=True)
+    parent_id = models.IntegerField(blank=True, null=True)
+    position_name = models.CharField(max_length=30, blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'enumerations'
