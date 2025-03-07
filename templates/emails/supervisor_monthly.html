@@ -1,0 +1,55 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+</head>
+<body style="margin: 0; padding: 0; font-family: Arial, sans-serif;">
+    <div style="width: 100%; max-width: 800px; margin: 0 auto; padding: 20px;">
+        <h2 style="color: #333; margin-bottom: 15px;">NDTL Program Monthly Time Report</h2>
+        <p style="color: #666; margin-bottom: 20px;">Report Period: {{ start_date|date:"M d, Y" }} - {{ end_date|date:"M d, Y" }}</p>
+
+        {% regroup entries by week_start as weekly_entries %}
+        {% for week in weekly_entries %}
+            <h3 style="color: #333; margin: 20px 0 10px;">Week of {{ week.grouper|date:"M d" }}</h3>
+            <table cellpadding="8" cellspacing="0" border="0" style="border-collapse: collapse; width: 100%; margin-bottom: 20px;">
+                <thead>
+                    <tr>
+                        <th style="border: 1px solid #ddd; background-color: #f8f8f8; padding: 8px; text-align: left;">Employee</th>
+                        <th style="border: 1px solid #ddd; background-color: #f8f8f8; padding: 8px; text-align: left;">Project</th>
+                        <th style="border: 1px solid #ddd; background-color: #f8f8f8; padding: 8px; text-align: left;">Activities</th>
+                        <th style="border: 1px solid #ddd; background-color: #f8f8f8; padding: 8px; text-align: left;">Hours</th>
+                        <th style="border: 1px solid #ddd; background-color: #f8f8f8; padding: 8px; text-align: left;">Dates</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for username, user_data in week.list.items %}
+                        <tr>
+                            <td rowspan="{{ user_data.projects|length }}" style="border: 1px solid #ddd; padding: 8px; text-align: left; vertical-align: top;">
+                                <strong style="display: block; margin-bottom: 5px;">{{ username }}</strong>
+                                <span style="color: #666;">Total Hours: {{ user_data.total_hours }}</span>
+                            </td>
+                            {% for project_code, project_data in user_data.projects.items %}
+                                {% if not forloop.first %}</tr><tr>{% endif %}
+                                <td style="border: 1px solid #ddd; padding: 8px; text-align: left;">{{ project_code }}</td>
+                                <td style="border: 1px solid #ddd; padding: 8px; text-align: left;">
+                                    {% for activity, activity_data in project_data.activities.items %}
+                                        <div style="margin-bottom: 8px;">
+                                            <strong>{{ activity }}:</strong> {{ activity_data.hours }} hours<br>
+                                            <span style="color: #666; font-size: 12px;">{{ activity_data.date_str }}</span>
+                                        </div>
+                                    {% endfor %}
+                                </td>
+                                <td style="border: 1px solid #ddd; padding: 8px; text-align: left;">{{ project_data.hours }}</td>
+                                <td style="border: 1px solid #ddd; padding: 8px; text-align: left;">
+                                    <span style="color: #666; font-size: 12px;">{{ project_data.date_str }}</span>
+                                </td>
+                            {% endfor %}
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% endfor %}
+    </div>
+</body>
+</html> 
