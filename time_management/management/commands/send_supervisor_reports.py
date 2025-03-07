@@ -98,6 +98,44 @@ class Command(BaseCommand):
         s.sendmail('noreply@turbo.crc.nd.edu', list_of_recipients, msg.as_string())
         s.quit()
 
+    def send_supervisor_report(self, supervisor_name, start_date, end_date, report_data, options):
+        # Convert dates to strings
+        for username, user_data in report_data.items():
+            for project_code, project_data in user_data['projects'].items():
+                dates = sorted(project_data['dates'])
+                project_data['date_str'] = ', '.join(d.strftime('%m/%d') for d in dates)
+                for activity in project_data['activities']:
+                    act_dates = sorted(project_data['activities'][activity]['dates'])
+                    project_data['activities'][activity]['date_str'] = ', '.join(d.strftime('%m/%d') for d in act_dates)
+        
+        # Choose template based on report type
+        template_name = 'emails/supervisor_monthly.html' if options.get('monthly') else 'emails/supervisor_weekly.html'
+        
+        context = {
+            'supervisor_name': supervisor_name,
+            'start_date': start_date,
+            'end_date': end_date,
+            'report_data': report_data
+        }
+        
+        html_content = render_to_string(template_name, context)
+        
+        # Only print if --print is specified AND no test_email is provided
+        if options.get('print') and not options.get('test_email'):
+            print("\nReport Content for %s:" % supervisor_name)
+            print(html_content)
+        else:
+            self.send_notification(
+                options.get('test_email', supervisor_name),
+                html_content,
+                'NDTL Program %s Time Report (%s - %s)' % (
+                    'Monthly' if options.get('monthly') else 'Weekly',
+                    start_date.strftime('%b %d'),
+                    end_date.strftime('%b %d')
+                )
+            )
+            print("Sent report to %s" % (options.get('test_email', supervisor_name)))
+
     def handle(self, *args, **options):
         print("\n=== Starting Supervisor Report Generation ===")
         
@@ -185,78 +223,13 @@ class Command(BaseCommand):
                                 report_data[username]['projects'][project]['activities'][activity]['date_str'] = ', '.join(d.strftime('%m/%d') for d in act_dates)
                     
                     # Generate HTML content
-                    template_name = 'emails/supervisor_monthly.html' if options.get('monthly') else 'emails/supervisor_weekly.html'
-                    
-                    if options.get('monthly'):
-                        # Group entries by week
-                        weekly_data = {}
-                        for entry in entries:
-                            # Get the Monday of the week
-                            week_start = entry.spent_on - timedelta(days=entry.spent_on.weekday())
-                            if week_start not in weekly_data:
-                                weekly_data[week_start] = {}
-                            username = '%s %s' % (entry.user.firstname, entry.user.lastname)
-                            if username not in weekly_data[week_start]:
-                                weekly_data[week_start][username] = {
-                                    'total_hours': 0.0,
-                                    'projects': {}
-                                }
-                            project_code = entry.project.identifier
-                            if project_code not in weekly_data[week_start][username]['projects']:
-                                weekly_data[week_start][username]['projects'][project_code] = {
-                                    'hours': 0.0,
-                                    'activities': {},
-                                    'dates': set()
-                                }
-                            activity = entry.comments or (entry.activity.name if entry.activity else '')
-                            if activity:
-                                if activity not in weekly_data[week_start][username]['projects'][project_code]['activities']:
-                                    weekly_data[week_start][username]['projects'][project_code]['activities'][activity] = {
-                                        'hours': 0.0,
-                                        'dates': set()
-                                    }
-                                weekly_data[week_start][username]['projects'][project_code]['activities'][activity]['hours'] += float(entry.hours)
-                                weekly_data[week_start][username]['projects'][project_code]['activities'][activity]['dates'].add(entry.spent_on)
-                            weekly_data[week_start][username]['projects'][project_code]['hours'] += float(entry.hours)
-                            weekly_data[week_start][username]['total_hours'] += float(entry.hours)
-                            weekly_data[week_start][username]['projects'][project_code]['dates'].add(entry.spent_on)
-                        
-                        # Sort weeks and generate final data
-                        sorted_weeks = sorted(weekly_data.keys())
-                        context = {
-                            'supervisor_name': supervisor_email,
-                            'start_date': start_date,
-                            'end_date': end_date,
-                            'entries': [
-                                {'week_start': week, 'data': weekly_data[week]}
-                                for week in sorted_weeks
-                            ]
-                        }
-                    else:
-                        # Weekly report context
-                        context = {
-                            'supervisor_name': supervisor_email,
-                            'start_date': start_date,
-                            'end_date': end_date,
-                            'report_data': report_data
-                        }
-                    
-                    html_content = render_to_string(template_name, context)
-                    
-                    if options.get('print'):
-                        print("\nReport Content:")
-                        print(html_content)
-                    else:
-                        self.send_notification(
-                            options.get('test_email', supervisor_email),
-                            html_content,
-                            'NDTL Program %s Time Report (%s - %s)' % (
-                                'Monthly' if options.get('monthly') else 'Weekly',
-                                start_date.strftime('%b %d'),
-                                end_date.strftime('%b %d')
-                            )
-                        )
-                        print("Sent report to %s" % supervisor_email)
+                    self.send_supervisor_report(
+                        supervisor_email,
+                        start_date,
+                        end_date,
+                        report_data,
+                        options
+                    )
             
         except Exception as e:
             print("ERROR: %s" % str(e))
