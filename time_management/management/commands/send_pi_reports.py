@@ -255,18 +255,6 @@ class Command(BaseCommand):
         print("\n=== PI Report Generation Complete ===\n")
 
     def send_pi_report(self, pi_name, start_date, end_date, report_data, options):
-        print("\nDebug - Processing report for PI: %s" % pi_name)
-        print("Debug - Report data structure:")
-        for project_code, project_data in report_data.items():
-            print("\nProject: %s" % project_code)
-            print("Total Hours: %s" % project_data['total_hours'])
-            print("Users:")
-            for username, user_data in project_data['users'].items():
-                print("  - %s: %s hours" % (username, user_data['hours']))
-                print("    Activities:")
-                for activity, activity_data in user_data['activities'].items():
-                    print("      * %s: %s hours" % (activity, activity_data['hours']))
-
         # Convert dates to strings
         for project_code in report_data:
             for username in report_data[project_code]['users']:
@@ -278,74 +266,28 @@ class Command(BaseCommand):
         
         # Choose template based on report type
         template_name = 'emails/pi_monthly.html' if options.get('monthly') else 'emails/pi_weekly.html'
-        print("\nDebug - Using template: %s" % template_name)
         
-        if options.get('monthly'):
-            # Group data by weeks for monthly report
-            weekly_data = {}
-            for project_code, project_data in report_data.items():
-                for username, user_data in project_data['users'].items():
-                    for date in user_data['dates']:
-                        week_start = date - timedelta(days=date.weekday())
-                        if week_start not in weekly_data:
-                            weekly_data[week_start] = {}
-                        if project_code not in weekly_data[week_start]:
-                            weekly_data[week_start][project_code] = {
-                                'total_hours': 0.0,
-                                'users': {}
-                            }
-                        if username not in weekly_data[week_start][project_code]['users']:
-                            weekly_data[week_start][project_code]['users'][username] = {
-                                'hours': 0.0,
-                                'activities': {},
-                                'dates': set()
-                            }
-                        
-                        # Copy activities for this week
-                        for activity, activity_data in user_data['activities'].items():
-                            if any(d.isocalendar()[1] == week_start.isocalendar()[1] for d in activity_data['dates']):
-                                if activity not in weekly_data[week_start][project_code]['users'][username]['activities']:
-                                    weekly_data[week_start][project_code]['users'][username]['activities'][activity] = {
-                                        'hours': 0.0,
-                                        'dates': set()
-                                    }
-                                weekly_data[week_start][project_code]['users'][username]['activities'][activity] = activity_data
-                                weekly_data[week_start][project_code]['users'][username]['hours'] += activity_data['hours']
-                                weekly_data[week_start][project_code]['total_hours'] += activity_data['hours']
-                                weekly_data[week_start][project_code]['users'][username]['dates'].update(activity_data['dates'])
-            
-            context = {
-                'pi_name': pi_name,
-                'start_date': start_date,
-                'end_date': end_date,
-                'entries': [
-                    {'week_start': week, 'list': data}
-                    for week, data in sorted(weekly_data.items())
-                ]
-            }
-        else:
-            # Weekly report uses data as-is
-            context = {
-                'pi_name': pi_name,
-                'start_date': start_date,
-                'end_date': end_date,
-                'report_data': report_data
-            }
+        context = {
+            'pi_name': pi_name,
+            'start_date': start_date,
+            'end_date': end_date,
+            'report_data': report_data
+        }
         
         html_content = render_to_string(template_name, context)
-        print("\nDebug - Generated HTML content:")
-        print(html_content)
         
-        if options.get('print'):
+        # Only print if --print is specified AND no test_email is provided
+        if options.get('print') and not options.get('test_email'):
             print("\nReport Content for %s:" % pi_name)
             print(html_content)
         else:
             self.send_notification(
                 options.get('test_email', pi_name),
                 html_content,
-                'NDTL Program Time Report (%s - %s)' % (
+                'NDTL Program %s Time Report (%s - %s)' % (
+                    'Monthly' if options.get('monthly') else 'Weekly',
                     start_date.strftime('%b %d'),
                     end_date.strftime('%b %d')
                 )
             )
-            print("Sent report to %s" % pi_name) 
+            print("Sent report to %s" % (options.get('test_email', pi_name))) 
