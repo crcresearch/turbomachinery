@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        th, td {
+            border: 1px solid black;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+    <h2>NDTL Program Monthly Time Report</h2>
+    <p>Report Period: {{ start_date|date:"M d, Y" }} - {{ end_date|date:"M d, Y" }}</p>
+
+    {% regroup entries by week_start as weekly_entries %}
+    {% for week in weekly_entries %}
+        <h3>Week of {{ week.grouper|date:"M d" }}</h3>
+        <table>
+            <tr>
+                <th>Project</th>
+                <th>Employee</th>
+                <th>Activities</th>
+                <th>Hours</th>
+                <th>Dates</th>
+            </tr>
+            {% for project_code, project_data in week.list.items %}
+                <tr>
+                    <td rowspan="{{ project_data.users|length }}">
+                        {{ project_code }}<br>
+                        Total Hours: {{ project_data.total_hours }}
+                    </td>
+                    {% for username, user_data in project_data.users.items %}
+                        {% if not forloop.first %}</tr><tr>{% endif %}
+                        <td>{{ username }}</td>
+                        <td>
+                            {% for activity, activity_data in user_data.activities.items %}
+                                {{ activity }}: {{ activity_data.hours }} hours<br>
+                                <small>{{ activity_data.date_str }}</small><br>
+                            {% endfor %}
+                        </td>
+                        <td>{{ user_data.hours }}</td>
+                        <td><small>{{ user_data.date_str }}</small></td>
+                    {% endfor %}
+                </tr>
+            {% endfor %}
+        </table>
+    {% endfor %}
+</body>
+</html> 

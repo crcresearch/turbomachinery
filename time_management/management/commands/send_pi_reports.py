@@ -10,6 +10,7 @@ import html2text
 import re
 import smtplib
 from email.mime.text import MIMEText
+import psycopg2
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +33,16 @@ class Command(BaseCommand):
             action='store_true',
             help='Generate monthly report instead of weekly',
         )
+        parser.add_argument(
+            '--start_date',
+            type=str,
+            help='Start date (YYYY-MM-DD)',
+        )
+        parser.add_argument(
+            '--end_date',
+            type=str,
+            help='End date (YYYY-MM-DD)',
+        )
 
     def is_email(self, string):
         """Check if string is an email address."""
@@ -40,6 +51,14 @@ class Command(BaseCommand):
 
     def get_report_dates(self, monthly=False, options=None):
         """Get start and end dates for the report period."""
+        # If start_date and end_date are provided in options, use those
+        if options and options.get('start_date') and options.get('end_date'):
+            start_date = datetime.strptime(options['start_date'], '%Y-%m-%d').date()
+            end_date = datetime.strptime(options['end_date'], '%Y-%m-%d').date()
+            print("\nUsing provided dates: %s to %s" % (start_date, end_date))
+            return start_date, end_date
+        
+        # Otherwise use default date logic
         today = timezone.now().date()
         
         # Only bypass day check if explicitly testing
@@ -153,107 +172,180 @@ class Command(BaseCommand):
         s.quit()
 
     def handle(self, *args, **options):
-        # Get appropriate date range based on report type
+        print("\n=== Starting PI Report Generation ===")
+        
         start_date, end_date = self.get_report_dates(options.get('monthly', False), options)
+        print("\nDate Range: %s to %s" % (start_date, end_date))
         
-        if not start_date or not end_date:
-            if options.get('monthly'):
-                print "Monthly reports should only run on the last Friday of the month"
-            else:
-                print "Weekly reports should only run on Mondays"
-            return
-
-        # Get all Financial PIs
-        financial_pis = self.get_financial_pis_with_emails()
-        
-        if not financial_pis:
-            print "No Financial PIs found"
-            return
-
-        # Get unique PIs
-        unique_pis = set(financial_pis.values())
-        print "Found %d Financial PIs\n" % len(unique_pis)
-
-        # Initialize HTML to text converter
-        h = html2text.HTML2Text()
-        h.body_width = 0  # Don't wrap text
-
-        # Generate and send report for each unique PI
-        for pi_name in unique_pis:
-            try:
-                # Get projects for this PI
-                pi_projects = [proj_id for proj_id, pi in financial_pis.items() if pi == pi_name]
+        try:
+            connection = psycopg2.connect(host='database1', database='redmine', user='postgres', password="Let's go turbo!")
+            cursor = connection.cursor()
+            
+            # Get entries directly with all needed information
+            cursor.execute("""
+                SELECT 
+                    cv.value as pi_name,
+                    p.identifier as project_code,
+                    u.firstname || ' ' || u.lastname as username,
+                    te.comments,
+                    a.name as activity_name,
+                    te.hours,
+                    te.spent_on
+                FROM time_entries te
+                JOIN projects p ON p.id = te.project_id
+                JOIN users u ON u.id = te.user_id
+                LEFT JOIN enumerations a ON a.id = te.activity_id
+                LEFT JOIN custom_values cv ON cv.customized_id = p.id
+                LEFT JOIN custom_fields cf ON cf.id = cv.custom_field_id
+                WHERE cf.name = 'Financial PI'
+                AND te.spent_on BETWEEN %s AND %s
+                ORDER BY cv.value, p.identifier, u.lastname, u.firstname
+            """, [start_date, end_date])
+            
+            entries = cursor.fetchall()
+            print("\nFound %d entries" % len(entries))
+            
+            # Group entries by PI
+            pi_data = {}
+            for entry in entries:
+                pi_name = entry[0]
+                project_code = entry[1]
+                username = entry[2]
+                activity = entry[3] or entry[4] or 'No Activity'
+                hours = float(entry[5])
+                spent_date = entry[6]
                 
-                if not pi_projects:
-                    print "No projects found for PI: %s" % pi_name
-                    continue
+                if pi_name not in pi_data:
+                    pi_data[pi_name] = {'projects': {}}
+                
+                if project_code not in pi_data[pi_name]['projects']:
+                    pi_data[pi_name]['projects'][project_code] = {
+                        'total_hours': 0.0,
+                        'users': {}
+                    }
+                
+                if username not in pi_data[pi_name]['projects'][project_code]['users']:
+                    pi_data[pi_name]['projects'][project_code]['users'][username] = {
+                        'hours': 0.0,
+                        'activities': {},
+                        'dates': set()
+                    }
+                
+                if activity not in pi_data[pi_name]['projects'][project_code]['users'][username]['activities']:
+                    pi_data[pi_name]['projects'][project_code]['users'][username]['activities'][activity] = {
+                        'hours': 0.0,
+                        'dates': set()
+                    }
+                
+                pi_data[pi_name]['projects'][project_code]['users'][username]['activities'][activity]['hours'] += hours
+                pi_data[pi_name]['projects'][project_code]['users'][username]['activities'][activity]['dates'].add(spent_date)
+                pi_data[pi_name]['projects'][project_code]['users'][username]['hours'] += hours
+                pi_data[pi_name]['projects'][project_code]['total_hours'] += hours
+                pi_data[pi_name]['projects'][project_code]['users'][username]['dates'].add(spent_date)
+            
+            # Process each PI's data
+            for pi_name, data in pi_data.items():
+                print("\nProcessing PI: %s" % pi_name)
+                self.send_pi_report(pi_name, start_date, end_date, data['projects'], options)
+            
+        except Exception as e:
+            print("ERROR: %s" % str(e))
+            raise
+        
+        print("\n=== PI Report Generation Complete ===\n")
 
-                # Get time entries for PI's projects
-                entries = TimeEntry.objects.filter(
-                    spent_on__range=[start_date, end_date],
-                    hours__gt=0,
-                    project__identifier__in=pi_projects
-                ).select_related(
-                    'project',
-                    'user',
-                    'activity'
-                ).order_by(
-                    'project__identifier',
-                    'user__lastname',
-                    'user__firstname'
+    def send_pi_report(self, pi_name, start_date, end_date, report_data, options):
+        print("\nDebug - Processing report for PI: %s" % pi_name)
+        print("Debug - Report data structure:")
+        for project_code, project_data in report_data.items():
+            print("\nProject: %s" % project_code)
+            print("Total Hours: %s" % project_data['total_hours'])
+            print("Users:")
+            for username, user_data in project_data['users'].items():
+                print("  - %s: %s hours" % (username, user_data['hours']))
+                print("    Activities:")
+                for activity, activity_data in user_data['activities'].items():
+                    print("      * %s: %s hours" % (activity, activity_data['hours']))
+
+        # Convert dates to strings
+        for project_code in report_data:
+            for username in report_data[project_code]['users']:
+                dates = sorted(report_data[project_code]['users'][username]['dates'])
+                report_data[project_code]['users'][username]['date_str'] = ', '.join(d.strftime('%m/%d') for d in dates)
+                for activity in report_data[project_code]['users'][username]['activities']:
+                    act_dates = sorted(report_data[project_code]['users'][username]['activities'][activity]['dates'])
+                    report_data[project_code]['users'][username]['activities'][activity]['date_str'] = ', '.join(d.strftime('%m/%d') for d in act_dates)
+        
+        # Choose template based on report type
+        template_name = 'emails/pi_monthly.html' if options.get('monthly') else 'emails/pi_weekly.html'
+        print("\nDebug - Using template: %s" % template_name)
+        
+        if options.get('monthly'):
+            # Group data by weeks for monthly report
+            weekly_data = {}
+            for project_code, project_data in report_data.items():
+                for username, user_data in project_data['users'].items():
+                    for date in user_data['dates']:
+                        week_start = date - timedelta(days=date.weekday())
+                        if week_start not in weekly_data:
+                            weekly_data[week_start] = {}
+                        if project_code not in weekly_data[week_start]:
+                            weekly_data[week_start][project_code] = {
+                                'total_hours': 0.0,
+                                'users': {}
+                            }
+                        if username not in weekly_data[week_start][project_code]['users']:
+                            weekly_data[week_start][project_code]['users'][username] = {
+                                'hours': 0.0,
+                                'activities': {},
+                                'dates': set()
+                            }
+                        
+                        # Copy activities for this week
+                        for activity, activity_data in user_data['activities'].items():
+                            if any(d.isocalendar()[1] == week_start.isocalendar()[1] for d in activity_data['dates']):
+                                if activity not in weekly_data[week_start][project_code]['users'][username]['activities']:
+                                    weekly_data[week_start][project_code]['users'][username]['activities'][activity] = {
+                                        'hours': 0.0,
+                                        'dates': set()
+                                    }
+                                weekly_data[week_start][project_code]['users'][username]['activities'][activity] = activity_data
+                                weekly_data[week_start][project_code]['users'][username]['hours'] += activity_data['hours']
+                                weekly_data[week_start][project_code]['total_hours'] += activity_data['hours']
+                                weekly_data[week_start][project_code]['users'][username]['dates'].update(activity_data['dates'])
+            
+            context = {
+                'pi_name': pi_name,
+                'start_date': start_date,
+                'end_date': end_date,
+                'entries': [
+                    {'week_start': week, 'list': data}
+                    for week, data in sorted(weekly_data.items())
+                ]
+            }
+        else:
+            # Weekly report uses data as-is
+            context = {
+                'pi_name': pi_name,
+                'start_date': start_date,
+                'end_date': end_date,
+                'report_data': report_data
+            }
+        
+        html_content = render_to_string(template_name, context)
+        print("\nDebug - Generated HTML content:")
+        print(html_content)
+        
+        if options.get('print'):
+            print("\nReport Content for %s:" % pi_name)
+            print(html_content)
+        else:
+            self.send_notification(
+                options.get('test_email', pi_name),
+                html_content,
+                'NDTL Program Time Report (%s - %s)' % (
+                    start_date.strftime('%b %d'),
+                    end_date.strftime('%b %d')
                 )
-
-                if not entries:
-                    print "No time entries found for PI: %s" % pi_name
-                    continue
-
-                # Generate report data
-                report_data = self.generate_pi_report(entries)
-
-                if options['print']:
-                    # Print to console instead of sending email
-                    print "\n" + "="*80
-                    print "Report for PI: %s" % pi_name
-                    print "="*80
-                    print h.handle(html_content)
-                    print "="*80 + "\n"
-                    print "Generated report for %s" % pi_name
-                else:
-                    # Only send if test_email is provided or pi_name is an email
-                    if options.get('test_email'):
-                        recipient_email = options['test_email']
-                    elif self.is_email(pi_name):
-                        recipient_email = pi_name
-                    else:
-                        print "Skipping %s - not an email address" % pi_name
-                        continue
-
-                    # Generate HTML content
-                    html_content = render_to_string('emails/weekly_report.html', {
-                        'pi_name': pi_name,
-                        'week_number': "%s-%s" % (str(start_date.strftime('%W')).zfill(2), str(end_date.strftime('%W')).zfill(2)),
-                        'start_date': start_date.strftime('%b. %d, %Y'),
-                        'end_date': end_date.strftime('%b. %d, %Y'),
-                        'report_data': report_data
-                    })
-
-                    try:
-                        self.send_notification(
-                            recipient_email,
-                            html_content,
-                            'NDTL %s Time Report (%s - %s)' % (
-                                'Monthly' if options.get('monthly') else 'Weekly',
-                                start_date.strftime('%b %d'),
-                                end_date.strftime('%b %d')
-                            )
-                        )
-                        print "Sent report to %s" % pi_name
-                    except Exception as e:
-                        logger.error("Failed to send email to %s: %s", pi_name, str(e))
-                        print "Failed to send email to %s: %s" % (pi_name, str(e))
-                
-            except Exception as e:
-                logger.error("Failed to process report for %s: %s", pi_name, str(e))
-                print "Failed to process report for %s: %s" % (pi_name, str(e))
-
-        print "Completed generating all reports" 
+            )
+            print("Sent report to %s" % pi_name) 
