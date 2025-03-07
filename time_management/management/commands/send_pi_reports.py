@@ -11,6 +11,7 @@ import re
 import smtplib
 from email.mime.text import MIMEText
 import psycopg2
+import time  # Add at the top with other imports
 
 logger = logging.getLogger(__name__)
 
@@ -160,16 +161,29 @@ class Command(BaseCommand):
 
     def send_notification(self, to_email, message_body, message_subject):
         msg = MIMEText(message_body, 'html')
-
         msg['Subject'] = message_subject
         msg['From'] = 'noreply@turbo.crc.nd.edu'
         msg['To'] = to_email
         list_of_recipients = [to_email]
 
-        # Send the message via our own SMTP server
-        s = smtplib.SMTP('dockerhost')
-        s.sendmail('noreply@turbo.crc.nd.edu', list_of_recipients, msg.as_string())
-        s.quit()
+        max_retries = 3
+        retry_delay = 5  # seconds
+
+        for attempt in range(max_retries):
+            try:
+                s = smtplib.SMTP('localhost')
+                s.sendmail('noreply@turbo.crc.nd.edu', list_of_recipients, msg.as_string())
+                s.quit()
+                time.sleep(1)  # Wait 1 second between emails
+                return
+            except Exception as e:
+                if attempt < max_retries - 1:
+                    print("SMTP Error: %s. Retrying in %d seconds..." % (str(e), retry_delay))
+                    time.sleep(retry_delay)
+                    retry_delay *= 2  # Double the delay for next retry
+                else:
+                    print("SMTP Error: %s" % str(e))
+                    raise
 
     def handle(self, *args, **options):
         print("\n=== Starting PI Report Generation ===")
@@ -267,16 +281,59 @@ class Command(BaseCommand):
         # Choose template based on report type
         template_name = 'emails/pi_monthly.html' if options.get('monthly') else 'emails/pi_weekly.html'
         
-        context = {
-            'pi_name': pi_name,
-            'start_date': start_date,
-            'end_date': end_date,
-            'report_data': report_data
-        }
+        if options.get('monthly'):
+            # Group data by weeks for monthly report
+            weekly_data = {}
+            for project_code, project_data in report_data.items():
+                for username, user_data in project_data['users'].items():
+                    for date in user_data['dates']:
+                        week_start = date - timedelta(days=date.weekday())
+                        if week_start not in weekly_data:
+                            weekly_data[week_start] = {}
+                        if project_code not in weekly_data[week_start]:
+                            weekly_data[week_start][project_code] = {
+                                'total_hours': 0.0,
+                                'users': {}
+                            }
+                        if username not in weekly_data[week_start][project_code]['users']:
+                            weekly_data[week_start][project_code]['users'][username] = {
+                                'hours': 0.0,
+                                'activities': {},
+                                'dates': set()
+                            }
+                        
+                        # Copy activities for this week
+                        for activity, activity_data in user_data['activities'].items():
+                            if any(d.isocalendar()[1] == week_start.isocalendar()[1] for d in activity_data['dates']):
+                                if activity not in weekly_data[week_start][project_code]['users'][username]['activities']:
+                                    weekly_data[week_start][project_code]['users'][username]['activities'][activity] = {
+                                        'hours': 0.0,
+                                    }
+                                weekly_data[week_start][project_code]['users'][username]['activities'][activity] = activity_data
+                                weekly_data[week_start][project_code]['users'][username]['hours'] += activity_data['hours']
+                                weekly_data[week_start][project_code]['total_hours'] += activity_data['hours']
+                                weekly_data[week_start][project_code]['users'][username]['dates'].update(activity_data['dates'])
+            
+            context = {
+                'pi_name': pi_name,
+                'start_date': start_date,
+                'end_date': end_date,
+                'entries': [
+                    {'week_start': week, 'list': data}
+                    for week, data in sorted(weekly_data.items())
+                ]
+            }
+        else:
+            # Weekly report uses data as-is
+            context = {
+                'pi_name': pi_name,
+                'start_date': start_date,
+                'end_date': end_date,
+                'report_data': report_data
+            }
         
         html_content = render_to_string(template_name, context)
         
-        # Only print if --print is specified AND no test_email is provided
         if options.get('print') and not options.get('test_email'):
             print("\nReport Content for %s:" % pi_name)
             print(html_content)
