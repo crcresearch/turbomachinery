@@ -11,6 +11,7 @@ import html2text
 import smtplib
 from email.mime.text import MIMEText
 import psycopg2
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -94,9 +95,24 @@ class Command(BaseCommand):
         msg['To'] = to_email
         list_of_recipients = [to_email]
 
-        s = smtplib.SMTP('dockerhost')
-        s.sendmail('noreply@turbo.crc.nd.edu', list_of_recipients, msg.as_string())
-        s.quit()
+        max_retries = 3
+        retry_delay = 5  # seconds
+
+        for attempt in range(max_retries):
+            try:
+                s = smtplib.SMTP('localhost')
+                s.sendmail('noreply@turbo.crc.nd.edu', list_of_recipients, msg.as_string())
+                s.quit()
+                time.sleep(1)  # Wait 1 second between emails
+                return
+            except Exception as e:
+                if attempt < max_retries - 1:
+                    print("SMTP Error: %s. Retrying in %d seconds..." % (str(e), retry_delay))
+                    time.sleep(retry_delay)
+                    retry_delay *= 2  # Double the delay for next retry
+                else:
+                    print("SMTP Error: %s" % str(e))
+                    raise
 
     def send_supervisor_report(self, supervisor_name, start_date, end_date, report_data, options):
         # Convert dates to strings
