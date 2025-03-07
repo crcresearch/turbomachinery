@@ -127,16 +127,59 @@ class Command(BaseCommand):
         # Choose template based on report type
         template_name = 'emails/supervisor_monthly.html' if options.get('monthly') else 'emails/supervisor_weekly.html'
         
-        context = {
-            'supervisor_name': supervisor_name,
-            'start_date': start_date,
-            'end_date': end_date,
-            'report_data': report_data
-        }
+        if options.get('monthly'):
+            # Group data by weeks for monthly report
+            weekly_data = {}
+            for username, user_data in report_data.items():
+                for project_code, project_data in user_data['projects'].items():
+                    for date in project_data['dates']:
+                        week_start = date - timedelta(days=date.weekday())
+                        if week_start not in weekly_data:
+                            weekly_data[week_start] = {}
+                        if username not in weekly_data[week_start]:
+                            weekly_data[week_start][username] = {
+                                'total_hours': 0.0,
+                                'projects': {}
+                            }
+                        if project_code not in weekly_data[week_start][username]['projects']:
+                            weekly_data[week_start][username]['projects'][project_code] = {
+                                'hours': 0.0,
+                                'activities': {},
+                                'dates': set()
+                            }
+                        
+                        # Copy activities for this week
+                        for activity, activity_data in project_data['activities'].items():
+                            if any(d.isocalendar()[1] == week_start.isocalendar()[1] for d in activity_data['dates']):
+                                if activity not in weekly_data[week_start][username]['projects'][project_code]['activities']:
+                                    weekly_data[week_start][username]['projects'][project_code]['activities'][activity] = {
+                                        'hours': 0.0,
+                                    }
+                                weekly_data[week_start][username]['projects'][project_code]['activities'][activity] = activity_data
+                                weekly_data[week_start][username]['projects'][project_code]['hours'] += activity_data['hours']
+                                weekly_data[week_start][username]['total_hours'] += activity_data['hours']
+                                weekly_data[week_start][username]['projects'][project_code]['dates'].update(activity_data['dates'])
+            
+            context = {
+                'supervisor_name': supervisor_name,
+                'start_date': start_date,
+                'end_date': end_date,
+                'entries': [
+                    {'week_start': week, 'list': data}
+                    for week, data in sorted(weekly_data.items())
+                ]
+            }
+        else:
+            # Weekly report uses data as-is
+            context = {
+                'supervisor_name': supervisor_name,
+                'start_date': start_date,
+                'end_date': end_date,
+                'report_data': report_data
+            }
         
         html_content = render_to_string(template_name, context)
         
-        # Only print if --print is specified AND no test_email is provided
         if options.get('print') and not options.get('test_email'):
             print("\nReport Content for %s:" % supervisor_name)
             print(html_content)
