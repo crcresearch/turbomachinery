@@ -1,99 +1,57 @@
-<h2 style="color: #333; font-family: Arial, sans-serif; margin-bottom: 5px;">Supervisor {% if monthly %}Monthly{% else %}Weekly{% endif %} Time Report</h2>
-<p style="color: #666; font-family: Arial, sans-serif; margin-top: 0;">Report Period: {{ start_date|date:"M d, Y" }} - {{ end_date|date:"M d, Y" }}</p>
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .total {
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h2>Time Report: {{ start_date|date:"M d, Y" }} - {{ end_date|date:"M d, Y" }}</h2>
 
-{% if entries %}
-    {% if monthly %}
-        {% for week, week_data in entries.items %}
-        <h3 style="color: #333; font-family: Arial, sans-serif; margin: 20px 0 5px;">{{ week }}</h3>
-        {% if week_data %}
-        <table cellpadding="5" cellspacing="0" style="width: 100%; border-collapse: collapse; font-family: Arial, sans-serif; border: 1px solid #000; margin-bottom: 20px;">
-    {% else %}
-        <table cellpadding="5" cellspacing="0" style="width: 100%; border-collapse: collapse; font-family: Arial, sans-serif; border: 1px solid #000;">
-    {% endif %}
-            <!-- Headers with light blue background -->
-            <tr style="background-color: #f0f8ff;">
-                <td style="width: 60%;">Sum of Hours</td>
-                <td style="text-align: right;">Column Labels</td>
-                <td style="text-align: right;">Grand Total</td>
-            </tr>
-            <tr style="background-color: #f0f8ff;">
-                <td>Row Labels</td>
-                <td style="text-align: right;">27</td>
-                <td style="text-align: right;">Grand Total</td>
-            </tr>
+    {% if entries %}
+        {% for person, data in entries.items %}
+            <h3>{{ person }} - Total Hours: {{ data.total_hours|floatformat:2 }}</h3>
             
-            <!-- Data rows -->
-            {% if monthly %}
-                {% for username, user_data in week_data.items %}
-            {% else %}
-                {% for username, user_data in entries.items %}
-            {% endif %}
-            <tr style="background-color: #f0f8ff; border-top: 1px solid #000;">
-                <td style="font-weight: bold;">{{ username }}</td>
-                <td style="text-align: right;">{{ user_data.total_hours|floatformat:1 }}</td>
-                <td style="text-align: right;">{{ user_data.total_hours|floatformat:1 }}</td>
-            </tr>
-                {% for project_code, project_data in user_data.projects.items %}
-                <tr>
-                    <td style="padding-left: 20px;">{{ project_code }}</td>
-                    <td style="text-align: right;">{{ project_data.total_hours|floatformat:1 }}</td>
-                    <td style="text-align: right;">{{ project_data.total_hours|floatformat:1 }}</td>
-                </tr>
-                    {% for activity, hours in project_data.activities.items %}
-                    <tr>
-                        <td style="padding-left: 40px;">{{ activity }}</td>
-                        <td style="text-align: right;">{{ hours|floatformat:1 }}</td>
-                        <td style="text-align: right;">{{ hours|floatformat:1 }}</td>
-                    </tr>
-                    {% endfor %}
+            {% if data.projects %}
+                {% for project_code, project_data in data.projects.items %}
+                    <h4>Project: {{ project_code }} - Hours: {{ project_data.total_hours|floatformat:2 }}</h4>
+                    
+                    {% if project_data.activities %}
+                        <table>
+                            <tr>
+                                <th>Activity</th>
+                                <th>Hours</th>
+                            </tr>
+                            {% for activity, hours in project_data.activities.items %}
+                                <tr>
+                                    <td>{{ activity }}</td>
+                                    <td>{{ hours|floatformat:2 }}</td>
+                                </tr>
+                            {% endfor %}
+                        </table>
+                    {% endif %}
                 {% endfor %}
-            {% endfor %}
-        </table>
-        {% if monthly %}
-            {% if not week_data %}
-            <p style="color: purple;">No data available for this week.</p>
             {% endif %}
-        {% endif %}
-    {% if monthly %}
+            <hr>
         {% endfor %}
+    {% else %}
+        <p>No time entries found for this period.</p>
     {% endif %}
-{% else %}
-<p style="color: purple;">No data available for this period.</p>
-{% endif %}
-
-{% for week in weekly_ranges %}
-<table border="1" cellpadding="5" cellspacing="0">
-    <tr>
-        <th>Sum of Hours</th>
-        <th>Column Labels</th>
-        <th>Grand Total</th>
-    </tr>
-    <tr>
-        <th>Row Labels</th>
-        <th>Hours</th>
-        <th>Grand Total</th>
-    </tr>
-    {% for project_code, project_data in week.entries.items %}
-    <tr style="background-color: #f0f8ff;">
-        <td>{{ project_code }}</td>
-        <td>{{ project_data.total_hours }}</td>
-        <td>{{ project_data.total_hours }}</td>
-    </tr>
-        {% for username, user_data in project_data.users.items %}
-        <tr>
-            <td style="padding-left: 20px;">{{ username }}</td>
-            <td>{{ user_data.total_hours }}</td>
-            <td>{{ user_data.total_hours }}</td>
-        </tr>
-            {% for activity, hours in user_data.activities.items %}
-            <tr>
-                <td style="padding-left: 40px;">{{ activity }}</td>
-                <td>{{ hours }}</td>
-                <td>{{ hours }}</td>
-            </tr>
-            {% endfor %}
-        {% endfor %}
-    {% endfor %}
-</table>
-<br>
-{% endfor %} 
+</body>
+</html> 
