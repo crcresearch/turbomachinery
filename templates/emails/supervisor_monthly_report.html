@@ -11,24 +11,24 @@
     </tr>
     <tr style="background-color: #f0f8ff;">
         <td>Row Labels</td>
-        <td style="text-align: right;">27</td>
+        <td style="text-align: right;">Hours</td>
         <td style="text-align: right;">Grand Total</td>
     </tr>
     
     <!-- Data rows -->
-    {% for project_code, project_data in entries.items %}
-    <tr>
-        <td style="font-weight: bold;">{{ project_code }}</td>
-        <td style="text-align: right;">{{ project_data.total_hours|floatformat:1 }}</td>
-        <td style="text-align: right;">{{ project_data.total_hours|floatformat:1 }}</td>
+    {% for username, user_data in entries.items %}
+    <tr style="border-top: 1px solid #ddd;">
+        <td style="font-weight: bold;">{{ username }}</td>
+        <td style="text-align: right;">{{ user_data.total_hours|floatformat:1 }}</td>
+        <td style="text-align: right;">{{ user_data.total_hours|floatformat:1 }}</td>
     </tr>
-        {% for username, user_data in project_data.users.items %}
+        {% for project_code, project_data in user_data.projects.items %}
         <tr>
-            <td style="padding-left: 20px;">{{ username }}</td>
-            <td style="text-align: right;">{{ user_data.total_hours|floatformat:1 }}</td>
-            <td style="text-align: right;">{{ user_data.total_hours|floatformat:1 }}</td>
+            <td style="padding-left: 20px;">{{ project_code }}</td>
+            <td style="text-align: right;">{{ project_data.total_hours|floatformat:1 }}</td>
+            <td style="text-align: right;">{{ project_data.total_hours|floatformat:1 }}</td>
         </tr>
-            {% for activity, hours in user_data.activities.items %}
+            {% for activity, hours in project_data.activities.items %}
             <tr>
                 <td style="padding-left: 40px;">{{ activity }}</td>
                 <td style="text-align: right;">{{ hours|floatformat:1 }}</td>
@@ -39,7 +39,7 @@
     {% endfor %}
 </table>
 {% else %}
-<p style="color: purple;">No data available for this period.</p>
+<p></p>
 {% endif %}
 
 {% for week in weekly_ranges %}
