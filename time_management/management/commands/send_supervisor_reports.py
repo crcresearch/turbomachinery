@@ -220,15 +220,34 @@ class Command(BaseCommand):
         
         return report_data
 
-    def get_report_data(self, start_date, end_date):
-        # First collect all entries by person
+    def get_report_data(self, start_date, end_date, monthly=False):
+        if not monthly:
+            # Weekly report - use existing person grouping
+            return self.get_person_grouped_data(start_date, end_date)
+        else:
+            # Monthly report - group by week first
+            weeks_data = {}
+            current_date = start_date
+            
+            while current_date <= end_date:
+                week_end = min(current_date + timedelta(days=6), end_date)
+                week_label = "Week of {0}".format(current_date.strftime("%b %d"))
+                
+                # Get data for this week
+                weeks_data[week_label] = self.get_person_grouped_data(current_date, week_end)
+                current_date += timedelta(days=7)
+            
+            return weeks_data
+
+    def get_person_grouped_data(self, start_date, end_date):
+        # Our existing person grouping code here
         person_entries = {}
         
         time_entries = TimeEntry.objects.filter(
             date__range=[start_date, end_date]
         ).select_related('user', 'project').order_by('user__last_name', 'user__first_name')
 
-        # First pass - group everything by person
+        # Group by person first
         for entry in time_entries:
             full_name = "{0} {1}".format(entry.user.first_name, entry.user.last_name).strip()
             
