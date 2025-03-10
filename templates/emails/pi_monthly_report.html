@@ -3,32 +3,65 @@
 <html>
 <head>
     <style>
-        table {
-            border-collapse: collapse;
-            width: 100%;
-            margin-bottom: 20px;
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
         }
-        th, td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
+        h2 {
+            color: #4B0082;  /* Dark purple */
+            border-bottom: 2px solid #4B0082;
+            padding-bottom: 10px;
+            margin-bottom: 25px;
         }
-        th {
-            background-color: #f2f2f2;
+        h4 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 16px;
         }
-        .total {
-            font-weight: bold;
-        }
-        .week-section {
-            margin-bottom: 30px;
-            border-bottom: 2px solid #ccc;
-            padding-bottom: 20px;
+        h5 {
+            color: #444;
+            margin: 10px 0;
+            font-size: 14px;
+            font-weight: normal;
         }
         .project-section {
-            margin-bottom: 20px;
+            margin-bottom: 30px;
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 4px solid #4B0082;
         }
         .indent {
-            margin-left: 20px;
+            margin-left: 25px;
+            padding-left: 10px;
+            border-left: 2px solid #ddd;
+        }
+        .activity {
+            margin: 5px 0;
+            color: #666;
+        }
+        .week-section {
+            margin-bottom: 40px;
+        }
+        .week-section h3 {
+            color: #4B0082;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 5px;
+            margin-bottom: 20px;
+        }
+        .total-hours {
+            font-weight: bold;
+            color: #4B0082;
+        }
+        .person-hours {
+            color: #666;
+        }
+        p {
+            margin: 5px 0;
         }
     </style>
 </head>
@@ -42,14 +75,14 @@
                 {% if entries %}
                     {% for project_code, project_data in entries.items %}
                         <div class="project-section">
-                            <h4>Project: {{ project_code }} - Total Hours: {{ project_data.total_hours|floatformat:2 }}</h4>
+                            <h4>Project: {{ project_code }} - <span class="total-hours">Total Hours: {{ project_data.total_hours|floatformat:2 }}</span></h4>
                             {% for person, person_data in project_data.users.items %}
                                 <div class="indent">
-                                    <h5>{{ person }} - Hours: {{ person_data.hours|floatformat:2 }}</h5>
+                                    <h5>{{ person }} - <span class="person-hours">Hours: {{ person_data.hours|floatformat:2 }}</span></h5>
                                     {% if person_data.activities %}
                                         <div class="indent">
                                             {% for activity, activity_data in person_data.activities.items %}
-                                                <p>{{ activity }}: {{ activity_data.hours|floatformat:2 }}</p>
+                                                <p class="activity">{{ activity }}: {{ activity_data.hours|floatformat:2 }}</p>
                                             {% endfor %}
                                         </div>
                                     {% endif %}
@@ -66,14 +99,14 @@
         {% if entries %}
             {% for project_code, project_data in entries.items %}
                 <div class="project-section">
-                    <h4>Project: {{ project_code }} - Total Hours: {{ project_data.total_hours|floatformat:2 }}</h4>
+                    <h4>Project: {{ project_code }} - <span class="total-hours">Total Hours: {{ project_data.total_hours|floatformat:2 }}</span></h4>
                     {% for person, person_data in project_data.users.items %}
                         <div class="indent">
-                            <h5>{{ person }} - Hours: {{ person_data.hours|floatformat:2 }}</h5>
+                            <h5>{{ person }} - <span class="person-hours">Hours: {{ person_data.hours|floatformat:2 }}</span></h5>
                             {% if person_data.activities %}
                                 <div class="indent">
                                     {% for activity, activity_data in person_data.activities.items %}
-                                        <p>{{ activity }}: {{ activity_data.hours|floatformat:2 }}</p>
+                                        <p class="activity">{{ activity }}: {{ activity_data.hours|floatformat:2 }}</p>
                                     {% endfor %}
                                 </div>
                             {% endif %}
