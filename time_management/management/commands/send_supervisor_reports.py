@@ -14,6 +14,7 @@ import psycopg2
 import time
 from email.mime.multipart import MIMEMultipart
 from time import sleep
+from django.template.loader import render_to_string
 
 logger = logging.getLogger(__name__)
 
@@ -91,21 +92,16 @@ class Command(BaseCommand):
         return None, None  # Not Monday or last Friday
 
     def send_notification(self, to_email, message_body, message_subject):
-        msg = MIMEMultipart()
+        msg = MIMEText(message_body, 'html')
+        msg['Subject'] = message_subject
         msg['From'] = 'noreply@turbo.crc.nd.edu'
         msg['To'] = to_email
-        msg['Subject'] = message_subject
-        msg.attach(MIMEText(message_body, 'html'))
-
-        try:
-            smtp = smtplib.SMTP('dockerhost')
-            smtp.sendmail('noreply@turbo.crc.nd.edu', to_email, msg.as_string())
-            smtp.close()
-            time.sleep(15)  # Wait 15 seconds between emails to stay under rate limit
-            return True
-        except Exception as e:
-            print("Error sending email to %s: %s" % (to_email, str(e)))
-            return False
+        
+        smtp = smtplib.SMTP('dockerhost')
+        smtp.sendmail('noreply@turbo.crc.nd.edu', [to_email], msg.as_string())
+        smtp.close()
+        
+        time.sleep(5)  # Wait 5 seconds between emails
 
     def send_supervisor_report(self, supervisor_email, start_date, end_date, options, team_members):
         print("\nProcessing supervisor:", supervisor_email)
@@ -299,8 +295,8 @@ class Command(BaseCommand):
         ))
 
     def handle(self, *args, **options):
-        start_date = options.get('start_date')
-        end_date = options.get('end_date')
+        start_date = datetime.strptime(options['start_date'], '%Y-%m-%d').date() if options.get('start_date') else None
+        end_date = datetime.strptime(options['end_date'], '%Y-%m-%d').date() if options.get('end_date') else None
         monthly = options.get('monthly', False)
         test_email = options.get('test_email')
 
@@ -315,10 +311,8 @@ class Command(BaseCommand):
             cursor = connection.cursor()
             
             if test_email:
-                # If test email provided, use it as the only supervisor
                 supervisors = [(test_email,)]
             else:
-                # Get all supervisors from Redmine database
                 cursor.execute("""
                     SELECT DISTINCT cv.value 
                     FROM custom_values cv 
@@ -347,52 +341,97 @@ class Command(BaseCommand):
                 """, [supervisor_email])
                 team_members = [row[0] for row in cursor.fetchall()]
                 
-                # Generate report content first
-                self.stdout.write('Processing {} report...'.format('monthly' if monthly else 'weekly'))
-                self.stdout.write('Generating email content...')
-                
-                subject, text_content, html_content = self.generate_report_content(
-                    supervisor_email, start_date, end_date, monthly
-                )
-                
-                # Then try to send email with retries
-                max_retries = 3
-                retry_delay = 5  # 5 seconds between retries
-                
-                for attempt in range(max_retries):
-                    try:
-                        send_mail(
-                            subject=subject,
-                            message=text_content,
-                            from_email=None,  # Uses DEFAULT_FROM_EMAIL
-                            recipient_list=[supervisor_email],
-                            html_message=html_content,
-                            fail_silently=False,
-                        )
-                        self.stdout.write(self.style.SUCCESS(
-                            'Successfully sent report to {}'.format(supervisor_email)
-                        ))
-                        break  # Exit retry loop on success
+                if team_members:
+                    self.stdout.write('Processing {} report...'.format('monthly' if monthly else 'weekly'))
+                    
+                    # Get entries for team members
+                    entries = TimeEntry.objects.filter(
+                        user_id__in=team_members,
+                        date__range=[start_date, end_date]
+                    ).select_related('user', 'project')
+                    
+                    # Generate report data
+                    report_data = {}
+                    for entry in entries:
+                        username = '{} {}'.format(entry.user.firstname, entry.user.lastname).strip()
                         
-                    except Exception as e:
-                        if attempt < max_retries - 1:
-                            self.stdout.write(self.style.WARNING(
-                                'Email attempt {} failed for {}, retrying in {} seconds... Error: {}'.format(
-                                    attempt + 1, supervisor_email, retry_delay, str(e)
-                                )
+                        if username not in report_data:
+                            report_data[username] = {
+                                'total_hours': 0,
+                                'projects': {}
+                            }
+                        
+                        project_code = entry.project.identifier if entry.project else 'No Project'
+                        activity = entry.activity or 'No Activity'
+                        hours = float(entry.hours)
+                        
+                        # Add to user total
+                        report_data[username]['total_hours'] += hours
+                        
+                        # Add to project data
+                        if project_code not in report_data[username]['projects']:
+                            report_data[username]['projects'][project_code] = {
+                                'total_hours': 0,
+                                'activities': {}
+                            }
+                        
+                        report_data[username]['projects'][project_code]['total_hours'] += hours
+                        
+                        # Add to activity data
+                        if activity not in report_data[username]['projects'][project_code]['activities']:
+                            report_data[username]['projects'][project_code]['activities'][activity] = 0
+                        report_data[username]['projects'][project_code]['activities'][activity] += hours
+                    
+                    # Sort by total hours
+                    report_data = dict(sorted(
+                        report_data.items(),
+                        key=lambda x: (-x[1]['total_hours'], x[0].lower())
+                    ))
+                    
+                    # Generate and send email
+                    self.stdout.write('Generating email content...')
+                    subject = 'NDTL Supervisor {} Time Report ({} - {})'.format(
+                        'Monthly' if monthly else 'Weekly',
+                        start_date.strftime('%b %d'),
+                        end_date.strftime('%b %d')
+                    )
+                    
+                    context = {
+                        'entries': report_data,
+                        'start_date': start_date,
+                        'end_date': end_date,
+                        'monthly': monthly
+                    }
+                    
+                    html_content = render_to_string('emails/supervisor_monthly_report.html', context)
+                    text_content = html2text.html2text(html_content)
+                    
+                    # Send email with retry logic
+                    max_retries = 3
+                    retry_delay = 5
+                    
+                    for attempt in range(max_retries):
+                        try:
+                            self.send_notification(
+                                supervisor_email,
+                                html_content,
+                                subject
+                            )
+                            self.stdout.write(self.style.SUCCESS(
+                                'Successfully sent report to {}'.format(supervisor_email)
                             ))
-                            sleep(retry_delay)
-                        else:
-                            self.stdout.write(self.style.ERROR(
-                                'Failed to send email to {} after {} attempts. Error: {}'.format(
-                                    supervisor_email, max_retries, str(e)
-                                )
-                            ))
-                            
+                            break
+                        except Exception as e:
+                            if attempt < max_retries - 1:
+                                self.stdout.write(self.style.WARNING(
+                                    'Attempt {} failed, retrying in {} seconds...'.format(
+                                        attempt + 1, retry_delay
+                                    )
+                                ))
+                                time.sleep(retry_delay)
+                            else:
+                                raise
+                
         except Exception as e:
             self.stdout.write(self.style.ERROR('Error: {}'.format(str(e))))
-            raise
-
-    def generate_report_content(self, supervisor, start_date, end_date, monthly):
-        # Existing report generation code...
-        pass 
+            raise 
