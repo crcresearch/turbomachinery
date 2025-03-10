@@ -184,48 +184,44 @@ class Command(BaseCommand):
         else:
             print("Failed to send report to", to_email)
             # Sleep here to give SMTP server time to recover
-            time.sleep(15)
+            time.sleep(30)
 
     def process_entries(self, entries):
         report_data = {}
         for entry in entries:
-            username = '%s %s' % (entry.user.firstname, entry.user.lastname)
-            if username not in report_data:
-                report_data[username] = {
+            project_code = entry.project.identifier
+            if project_code not in report_data:
+                report_data[project_code] = {
                     'total_hours': 0.0,
-                    'projects': {}
+                    'users': {}
                 }
             
-            project_code = entry.project.identifier
-            if project_code not in report_data[username]['projects']:
-                report_data[username]['projects'][project_code] = {
-                    'hours': 0.0,
-                    'activities': {},
-                    'dates': set()
+            username = '%s %s' % (entry.user.firstname, entry.user.lastname)
+            if username not in report_data[project_code]['users']:
+                report_data[project_code]['users'][username] = {
+                    'total_hours': 0.0,
+                    'activities': {}
                 }
             
             activity = entry.comments or (entry.activity.name if entry.activity else '')
             if activity:
-                if activity not in report_data[username]['projects'][project_code]['activities']:
-                    report_data[username]['projects'][project_code]['activities'][activity] = {
+                if activity not in report_data[project_code]['users'][username]['activities']:
+                    report_data[project_code]['users'][username]['activities'][activity] = {
                         'hours': 0.0,
                         'dates': set()
                     }
-                report_data[username]['projects'][project_code]['activities'][activity]['hours'] += float(entry.hours)
-                report_data[username]['projects'][project_code]['activities'][activity]['dates'].add(entry.spent_on)
+                report_data[project_code]['users'][username]['activities'][activity]['hours'] += float(entry.hours)
+                report_data[project_code]['users'][username]['activities'][activity]['dates'].add(entry.spent_on)
             
-            report_data[username]['projects'][project_code]['hours'] += float(entry.hours)
-            report_data[username]['total_hours'] += float(entry.hours)
-            report_data[username]['projects'][project_code]['dates'].add(entry.spent_on)
+            report_data[project_code]['users'][username]['total_hours'] += float(entry.hours)
+            report_data[project_code]['total_hours'] += float(entry.hours)
         
         # Convert dates to strings
-        for username in report_data:
-            for project in report_data[username]['projects']:
-                dates = sorted(report_data[username]['projects'][project]['dates'])
-                report_data[username]['projects'][project]['date_str'] = ', '.join(d.strftime('%m/%d') for d in dates)
-                for activity in report_data[username]['projects'][project]['activities']:
-                    act_dates = sorted(report_data[username]['projects'][project]['activities'][activity]['dates'])
-                    report_data[username]['projects'][project]['activities'][activity]['date_str'] = ', '.join(d.strftime('%m/%d') for d in act_dates)
+        for project_code in report_data:
+            for username in report_data[project_code]['users']:
+                for activity in report_data[project_code]['users'][username]['activities']:
+                    dates = sorted(report_data[project_code]['users'][username]['activities'][activity]['dates'])
+                    report_data[project_code]['users'][username]['activities'][activity]['date_str'] = ', '.join(d.strftime('%m/%d') for d in dates)
         
         return report_data
 

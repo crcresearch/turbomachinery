@@ -1,5 +1,39 @@
-<h2>NDTL Program Weekly Time Report</h2>
+<h2>NDTL Program {% if monthly %}Monthly{% else %}Weekly{% endif %} Time Report</h2>
 <p>Report Period: {{ start_date|date:"M d, Y" }} - {{ end_date|date:"M d, Y" }}</p>
+
+<table border="1" cellpadding="5" cellspacing="0">
+    <tr>
+        <th>Sum of Hours</th>
+        <th>Column Labels</th>
+        <th>Grand Total</th>
+    </tr>
+    <tr>
+        <th>Row Labels</th>
+        <th>Hours</th>
+        <th>Grand Total</th>
+    </tr>
+    {% for project_code, project_data in entries.items %}
+    <tr style="background-color: #f0f8ff;">
+        <td>{{ project_code }}</td>
+        <td>{{ project_data.total_hours }}</td>
+        <td>{{ project_data.total_hours }}</td>
+    </tr>
+        {% for username, user_data in project_data.users.items %}
+        <tr>
+            <td style="padding-left: 20px;">{{ username }}</td>
+            <td>{{ user_data.total_hours }}</td>
+            <td>{{ user_data.total_hours }}</td>
+        </tr>
+            {% for activity, activity_data in user_data.activities.items %}
+            <tr>
+                <td style="padding-left: 40px;">{{ activity }}</td>
+                <td>{{ activity_data.hours }}</td>
+                <td>{{ activity_data.hours }}</td>
+            </tr>
+            {% endfor %}
+        {% endfor %}
+    {% endfor %}
+</table>
 
 {% for week in weekly_ranges %}
 <table border="1" cellpadding="5" cellspacing="0">
