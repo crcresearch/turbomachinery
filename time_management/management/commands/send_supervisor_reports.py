@@ -173,7 +173,7 @@ class Command(BaseCommand):
             self.send_notification(
                 options.get('test_email', supervisor_name),
                 html_content,
-                'NDTL Program %s Time Report (%s - %s)' % (
+                'NDTL Supervisor %s Time Report (%s - %s)' % (
                     'Monthly' if options.get('monthly') else 'Weekly',
                     start_date.strftime('%b %d'),
                     end_date.strftime('%b %d')
