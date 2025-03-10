@@ -221,54 +221,47 @@ class Command(BaseCommand):
         return report_data
 
     def get_report_data(self, start_date, end_date):
-        entries = {}
+        # First collect all entries by person
+        person_entries = {}
         
-        # Get all users first
-        users = TimeEntry.objects.filter(
+        time_entries = TimeEntry.objects.filter(
             date__range=[start_date, end_date]
-        ).values('user', 'user__first_name', 'user__last_name').distinct()
-        
-        # Group by person first
-        for user in users:
-            full_name = "{0} {1}".format(user['user__first_name'], user['user__last_name']).strip()
+        ).select_related('user', 'project').order_by('user__last_name', 'user__first_name')
+
+        # First pass - group everything by person
+        for entry in time_entries:
+            full_name = "{0} {1}".format(entry.user.first_name, entry.user.last_name).strip()
             
-            # Get all entries for this user
-            user_entries = TimeEntry.objects.filter(
-                user_id=user['user'],
-                date__range=[start_date, end_date]
-            ).select_related('project').order_by('project__code')
+            # Initialize person if not exists
+            if full_name not in person_entries:
+                person_entries[full_name] = {
+                    'total_hours': 0,
+                    'projects': {}
+                }
             
-            if not user_entries:
-                continue
+            # Add to person's total
+            person_entries[full_name]['total_hours'] += entry.hours
             
-            # Calculate user total
-            user_total = sum(entry.hours for entry in user_entries)
+            # Add project data
+            project_code = entry.project.code if entry.project else 'No Project'
+            if project_code not in person_entries[full_name]['projects']:
+                person_entries[full_name]['projects'][project_code] = {
+                    'total_hours': 0,
+                    'activities': {}
+                }
             
-            # Initialize user in entries dict
-            entries[full_name] = {
-                'total_hours': user_total,
-                'projects': {}
-            }
+            # Add to project total
+            person_entries[full_name]['projects'][project_code]['total_hours'] += entry.hours
             
-            # Group user's entries by project
-            for entry in user_entries:
-                project_code = entry.project.code if entry.project else 'No Project'
-                activity = entry.activity or 'No Activity'
-                
-                if project_code not in entries[full_name]['projects']:
-                    entries[full_name]['projects'][project_code] = {
-                        'total_hours': 0,
-                        'activities': {}
-                    }
-                
-                entries[full_name]['projects'][project_code]['total_hours'] += entry.hours
-                
-                if activity not in entries[full_name]['projects'][project_code]['activities']:
-                    entries[full_name]['projects'][project_code]['activities'][activity] = 0
-                entries[full_name]['projects'][project_code]['activities'][activity] += entry.hours
-        
-        # Sort by user name
-        return dict(sorted(entries.items()))
+            # Add activity
+            activity = entry.activity or 'No Activity'
+            if activity not in person_entries[full_name]['projects'][project_code]['activities']:
+                person_entries[full_name]['projects'][project_code]['activities'][activity] = 0
+            person_entries[full_name]['projects'][project_code]['activities'][activity] += entry.hours
+
+        # Sort by total hours descending
+        return dict(sorted(person_entries.items(), 
+                          key=lambda x: (-x[1]['total_hours'], x[0])))
 
     def handle(self, *args, **options):
         print("\n=== Starting Supervisor Report Generation ===")
