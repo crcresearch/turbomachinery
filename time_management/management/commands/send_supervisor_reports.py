@@ -117,13 +117,11 @@ class Command(BaseCommand):
         if options.get('monthly'):
             print("Processing monthly report...")
             current = start_date
-            while current <= end_date:
+            while current < end_date:  # Changed <= to <
                 print("Processing week starting %s" % current)
                 # Find Saturday (start of week)
-                week_start = current - timedelta(days=current.weekday() + 2)
-                if week_start < start_date:
-                    week_start = start_date
-                    
+                week_start = current
+                
                 # Find Friday (end of week)
                 week_end = week_start + timedelta(days=6)
                 if week_end > end_date:
@@ -148,6 +146,9 @@ class Command(BaseCommand):
                 
                 current = week_end + timedelta(days=1)
                 print("Week processed")
+                
+                if current >= end_date:  # Added explicit break condition
+                    break
         else:
             print("Processing weekly report...")
             # Single week processing
