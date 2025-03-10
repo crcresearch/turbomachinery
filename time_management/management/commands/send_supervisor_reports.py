@@ -245,7 +245,7 @@ class Command(BaseCommand):
             
             # Modified email sending with retry logic
             max_retries = 3
-            retry_delay = 30  # seconds
+            retry_delay = 120  # seconds
 
             for attempt in range(max_retries):
                 try:
@@ -275,10 +275,10 @@ class Command(BaseCommand):
                     break  # Exit loop if email sent successfully
                 except Exception as e:
                     if attempt < max_retries - 1:
-                        self.stdout.write(self.style.WARNING(f'Attempt {attempt + 1} failed, retrying in {retry_delay} seconds...'))
+                        self.stdout.write(self.style.WARNING('Attempt {0} failed, retrying in {1} seconds...'.format(attempt + 1, retry_delay)))
                         sleep(retry_delay)
                     else:
-                        self.stdout.write(self.style.ERROR(f'Failed to send email after {max_retries} attempts. Error: {str(e)}'))
+                        self.stdout.write(self.style.ERROR('Failed to send email after {0} attempts. Error: {1}'.format(max_retries, str(e))))
             
         except Exception as e:
             print("ERROR: %s" % str(e))
