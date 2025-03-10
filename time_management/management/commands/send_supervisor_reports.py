@@ -220,6 +220,45 @@ class Command(BaseCommand):
         
         return report_data
 
+    def get_report_data(self, start_date, end_date):
+        # First, group by person
+        entries = {}
+        
+        time_entries = TimeEntry.objects.filter(
+            date__range=[start_date, end_date]
+        ).select_related('user', 'project').order_by('user__username')
+
+        # Group by person first
+        for entry in time_entries:
+            username = entry.user.get_full_name() or entry.user.username
+            
+            # Initialize user if not exists
+            if username not in entries:
+                entries[username] = {
+                    'total_hours': 0,
+                    'projects': {}
+                }
+            
+            # Add to user's total
+            entries[username]['total_hours'] += entry.hours
+            
+            # Initialize project if not exists
+            if entry.project.code not in entries[username]['projects']:
+                entries[username]['projects'][entry.project.code] = {
+                    'total_hours': 0,
+                    'activities': {}
+                }
+            
+            # Add to project total
+            entries[username]['projects'][entry.project.code]['total_hours'] += entry.hours
+            
+            # Add activity hours
+            if entry.activity not in entries[username]['projects'][entry.project.code]['activities']:
+                entries[username]['projects'][entry.project.code]['activities'][entry.activity] = 0
+            entries[username]['projects'][entry.project.code]['activities'][entry.activity] += entry.hours
+
+        return entries
+
     def handle(self, *args, **options):
         print("\n=== Starting Supervisor Report Generation ===")
         
