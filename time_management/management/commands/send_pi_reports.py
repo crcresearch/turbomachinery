@@ -12,6 +12,7 @@ import smtplib
 from email.mime.text import MIMEText
 import psycopg2
 import time  # Add at the top with other imports
+from email.mime.multipart import MIMEMultipart
 
 logger = logging.getLogger(__name__)
 
@@ -160,25 +161,17 @@ class Command(BaseCommand):
         return pi_report
 
     def send_notification(self, to_email, message_body, message_subject):
-        msg = MIMEText(message_body, 'html')
-
-        msg['Subject'] = message_subject
+        msg = MIMEMultipart()
         msg['From'] = 'noreply@turbo.crc.nd.edu'
         msg['To'] = to_email
-        list_of_recipients = [to_email]
+        msg['Subject'] = message_subject
 
-        try:
-            # Add initial delay before first email attempt
-            time.sleep(30)  # Wait 30 seconds before starting
-            
-            # Send the message via our own SMTP server, but don't include the
-            # envelope header.
-            s = smtplib.SMTP('dockerhost')
-            s.sendmail('noreply@turbo.crc.nd.edu', list_of_recipients, msg.as_string())
-            s.close()
-            time.sleep(10)  # Keep 10 second delay between emails
-        except Exception as e:
-            print("Error sending email to %s: %s" % (to_email, str(e)))
+        msg.attach(MIMEText(message_body, 'html'))
+
+        smtp = smtplib.SMTP('dockerhost')
+        smtp.sendmail('noreply@turbo.crc.nd.edu', to_email, msg.as_string())
+        smtp.close()
+        time.sleep(10)  # Keep the delay
 
     def handle(self, *args, **options):
         print("\n=== Starting PI Report Generation ===")
