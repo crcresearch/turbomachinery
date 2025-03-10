@@ -184,7 +184,7 @@ class Command(BaseCommand):
         else:
             print("Failed to send report to", to_email)
             # Sleep here to give SMTP server time to recover
-            time.sleep(30)
+            time.sleep(500)
 
     def process_entries(self, entries):
         report_data = {}
