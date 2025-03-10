@@ -232,15 +232,15 @@ class Command(BaseCommand):
 
                 if not pi_email:
                     self.stdout.write(self.style.WARNING(
-                        f'Skipping PI "{pi_name}" - no valid email found'
+                        'Skipping PI "{}" - no valid email found'.format(pi_name)
                     ))
                     continue
 
                 if options.get('test_email'):
                     pi_email = options.get('test_email')
 
-                self.stdout.write(f'\nProcessing Financial PI: {pi_name} ({pi_email})')
-                self.stdout.write(f'Projects: {", ".join(pi_projects)}')
+                self.stdout.write('\nProcessing Financial PI: {} ({})'.format(pi_name, pi_email))
+                self.stdout.write('Projects: {}'.format(', '.join(pi_projects)))
 
                 if options.get('monthly'):
                     # For monthly reports, break into weeks
