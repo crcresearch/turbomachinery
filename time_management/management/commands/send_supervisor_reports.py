@@ -159,7 +159,7 @@ class Command(BaseCommand):
             }]
         
         # Generate the report content
-        template = get_template('notification_emails/supervisor_monthly_report.html')
+        template = get_template('emails/supervisor_monthly_report.html')
         message = template.render({
             'supervisor_name': supervisor_email,
             'start_date': start_date,
