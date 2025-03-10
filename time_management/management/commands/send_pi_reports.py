@@ -168,12 +168,15 @@ class Command(BaseCommand):
         list_of_recipients = [to_email]
 
         try:
+            # Add initial delay before first email attempt
+            time.sleep(30)  # Wait 30 seconds before starting
+            
             # Send the message via our own SMTP server, but don't include the
             # envelope header.
             s = smtplib.SMTP('dockerhost')
             s.sendmail('noreply@turbo.crc.nd.edu', list_of_recipients, msg.as_string())
-            s.close()  # Use close() instead of quit()
-            time.sleep(5)  # Add 5 second delay between emails
+            s.close()
+            time.sleep(10)  # Keep 10 second delay between emails
         except Exception as e:
             print("Error sending email to %s: %s" % (to_email, str(e)))
 
