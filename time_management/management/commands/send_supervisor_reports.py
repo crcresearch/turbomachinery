@@ -109,67 +109,47 @@ class Command(BaseCommand):
         to_email = options.get('test_email', supervisor_email)
         
         # For monthly reports, break into weeks
-        weekly_ranges = []
-        if options.get('monthly'):
-            print("Processing monthly report...")
-            current = start_date
-            while current < end_date:  # Changed <= to <
-                print("Processing week starting %s" % current)
-                # Find Saturday (start of week)
-                week_start = current
-                
-                # Find Friday (end of week)
-                week_end = week_start + timedelta(days=6)
-                if week_end > end_date:
-                    week_end = end_date
-                
-                print("Fetching entries for %s to %s" % (week_start, week_end))
-                # Get entries for this week
-                entries = TimeEntry.objects.filter(
-                    spent_on__range=[week_start, week_end],
-                    user_id__in=team_members
-                ).select_related('user', 'project', 'activity')
-                
-                print("Processing %d entries" % entries.count())
-                # Process entries into report data
-                report_data = self.process_entries(entries)
-                
-                weekly_ranges.append({
-                    'start': week_start,
-                    'end': week_end,
-                    'entries': report_data
-                })
-                
-                current = week_end + timedelta(days=1)
-                print("Week processed")
-                
-                if current >= end_date:  # Added explicit break condition
-                    break
-        else:
-            print("Processing weekly report...")
-            # Single week processing
+        weekly_data = {}
+        current_date = start_date
+        
+        # Calculate all week start dates for the month
+        week_starts = []
+        while current_date <= end_date:
+            week_starts.append(current_date)
+            current_date += timedelta(days=7)
+        
+        # Process each week
+        for week_start in week_starts:
+            week_end = min(week_start + timedelta(days=6), end_date)
+            week_label = "Week of {}".format(week_start.strftime("%b %d"))
+            
+            # Get entries for this week
             entries = TimeEntry.objects.filter(
-                spent_on__range=[start_date, end_date],
-                user_id__in=team_members
+                user__in=team_members,
+                spent_on__range=[week_start, week_end]
             ).select_related('user', 'project', 'activity')
             
-            report_data = self.process_entries(entries)
-            
-            weekly_ranges = [{
-                'start': start_date,
-                'end': end_date,
-                'entries': report_data
-            }]
+            if entries.exists():
+                weekly_data[week_label] = self.process_entries(entries)
+                self.stdout.write(
+                    '\nProcessing week {} to {}: {} entries'.format(
+                        week_start.strftime('%Y-%m-%d'),
+                        week_end.strftime('%Y-%m-%d'),
+                        entries.count()
+                    )
+                )
+
+        context = {
+            'weekly_data': weekly_data,
+            'start_date': start_date,
+            'end_date': end_date,
+            'monthly': True
+        }
         
         print("Generating email content...")
         # Generate the report content
         template = get_template('emails/supervisor_monthly_report.html')
-        message = template.render({
-            'supervisor_name': supervisor_email,
-            'start_date': start_date,
-            'end_date': end_date,
-            'weekly_ranges': weekly_ranges
-        })
+        message = template.render(context)
         
         # Set subject based on report type
         subject = 'Turbomachinery Lab Monthly Hours Report' if options.get('monthly') else 'Turbomachinery Lab Weekly Hours Report'
@@ -363,20 +343,33 @@ class Command(BaseCommand):
                         # For monthly reports, break into weeks
                         weekly_data = {}
                         current_date = start_date
+                        
+                        # Calculate all week start dates for the month
+                        week_starts = []
                         while current_date <= end_date:
-                            week_end = min(current_date + timedelta(days=6), end_date)
-                            week_label = "Week of {}".format(current_date.strftime("%b %d"))
+                            week_starts.append(current_date)
+                            current_date += timedelta(days=7)
+                        
+                        # Process each week
+                        for week_start in week_starts:
+                            week_end = min(week_start + timedelta(days=6), end_date)
+                            week_label = "Week of {}".format(week_start.strftime("%b %d"))
                             
                             # Get entries for this week
                             entries = TimeEntry.objects.filter(
                                 user__in=team_members,
-                                spent_on__range=[current_date, week_end]
+                                spent_on__range=[week_start, week_end]
                             ).select_related('user', 'project', 'activity')
                             
                             if entries.exists():
                                 weekly_data[week_label] = self.process_entries(entries)
-                            
-                            current_date = week_end + timedelta(days=1)
+                                self.stdout.write(
+                                    '\nProcessing week {} to {}: {} entries'.format(
+                                        week_start.strftime('%Y-%m-%d'),
+                                        week_end.strftime('%Y-%m-%d'),
+                                        entries.count()
+                                    )
+                                )
 
                         context = {
                             'weekly_data': weekly_data,
