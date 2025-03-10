@@ -1,5 +1,5 @@
 from django.core.management.base import BaseCommand
-from django.template.loader import render_to_string
+from django.template.loader import get_template
 from django.utils import timezone
 from django.db import connection
 from django.core.mail import send_mail
