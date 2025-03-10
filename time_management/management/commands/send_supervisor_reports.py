@@ -102,7 +102,7 @@ class Command(BaseCommand):
             s = smtplib.SMTP('dockerhost')
             s.sendmail('noreply@turbo.crc.nd.edu', list_of_recipients, msg.as_string())
             s.close()  # Use close() instead of quit()
-            time.sleep(5)  # Add 5 second delay between emails
+            time.sleep(10)  # Keep the 10 second delay that was working
         except Exception as e:
             print("Error sending email to %s: %s" % (to_email, str(e)))
 
