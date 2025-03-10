@@ -234,53 +234,69 @@ class Command(BaseCommand):
                 week_label = "Week of {0}".format(current_date.strftime("%b %d"))
                 
                 # Get data for this week
-                weeks_data[week_label] = self.get_person_grouped_data(current_date, week_end)
+                week_data = self.get_person_grouped_data(current_date, week_end)
+                if week_data:  # Only add weeks with data
+                    weeks_data[week_label] = week_data
                 current_date += timedelta(days=7)
             
             return weeks_data
 
     def get_person_grouped_data(self, start_date, end_date):
-        # Our existing person grouping code here
         person_entries = {}
         
-        time_entries = TimeEntry.objects.filter(
+        # First get all unique users for this period
+        users = TimeEntry.objects.filter(
             date__range=[start_date, end_date]
-        ).select_related('user', 'project').order_by('user__last_name', 'user__first_name')
-
-        # Group by person first
-        for entry in time_entries:
-            full_name = "{0} {1}".format(entry.user.first_name, entry.user.last_name).strip()
+        ).values_list('user', 'user__first_name', 'user__last_name').distinct()
+        
+        # Then process each user's entries
+        for user_id, first_name, last_name in users:
+            full_name = "{0} {1}".format(first_name, last_name).strip()
             
-            # Initialize person if not exists
-            if full_name not in person_entries:
-                person_entries[full_name] = {
-                    'total_hours': 0,
-                    'projects': {}
-                }
+            # Get ALL entries for this user in the date range
+            user_entries = TimeEntry.objects.filter(
+                user_id=user_id,
+                date__range=[start_date, end_date]
+            ).select_related('project').order_by('date', 'project__code')
             
-            # Add to person's total
-            person_entries[full_name]['total_hours'] += entry.hours
+            if not user_entries:
+                continue
             
-            # Add project data
-            project_code = entry.project.code if entry.project else 'No Project'
-            if project_code not in person_entries[full_name]['projects']:
-                person_entries[full_name]['projects'][project_code] = {
-                    'total_hours': 0,
-                    'activities': {}
-                }
+            # Initialize user data
+            person_entries[full_name] = {
+                'total_hours': 0,
+                'projects': {}
+            }
             
-            # Add to project total
-            person_entries[full_name]['projects'][project_code]['total_hours'] += entry.hours
-            
-            # Add activity
-            activity = entry.activity or 'No Activity'
-            if activity not in person_entries[full_name]['projects'][project_code]['activities']:
-                person_entries[full_name]['projects'][project_code]['activities'][activity] = 0
-            person_entries[full_name]['projects'][project_code]['activities'][activity] += entry.hours
-
-        # Sort by total hours descending
-        return dict(sorted(person_entries.items(), 
-                          key=lambda x: (-x[1]['total_hours'], x[0])))
+            # Group all entries by project
+            for entry in user_entries:
+                project_code = entry.project.code if entry.project else 'No Project'
+                activity = entry.activity or 'No Activity'
+                hours = float(entry.hours)
+                
+                # Add to user total
+                person_entries[full_name]['total_hours'] += hours
+                
+                # Ensure project exists
+                if project_code not in person_entries[full_name]['projects']:
+                    person_entries[full_name]['projects'][project_code] = {
+                        'total_hours': 0,
+                        'activities': {}
+                    }
+                
+                # Add to project total
+                person_entries[full_name]['projects'][project_code]['total_hours'] += hours
+                
+                # Add or update activity hours
+                if activity not in person_entries[full_name]['projects'][project_code]['activities']:
+                    person_entries[full_name]['projects'][project_code]['activities'][activity] = 0
+                person_entries[full_name]['projects'][project_code]['activities'][activity] += hours
+        
+        # Sort by total hours descending, then by name
+        return dict(sorted(
+            person_entries.items(),
+            key=lambda x: (-x[1]['total_hours'], x[0].lower())
+        ))
 
     def handle(self, *args, **options):
         print("\n=== Starting Supervisor Report Generation ===")
