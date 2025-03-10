@@ -133,46 +133,8 @@ class Command(BaseCommand):
                     user_id__in=team_members
                 ).select_related('user', 'project', 'activity')
                 
-                # Process entries into the same format as before
-                report_data = {}
-                for entry in entries:
-                    username = '%s %s' % (entry.user.firstname, entry.user.lastname)
-                    if username not in report_data:
-                        report_data[username] = {
-                            'total_hours': 0.0,
-                            'projects': {}
-                        }
-                    
-                    project_code = entry.project.identifier
-                    if project_code not in report_data[username]['projects']:
-                        report_data[username]['projects'][project_code] = {
-                            'hours': 0.0,
-                            'activities': {},
-                            'dates': set()
-                        }
-                    
-                    activity = entry.comments or (entry.activity.name if entry.activity else '')
-                    if activity:
-                        if activity not in report_data[username]['projects'][project_code]['activities']:
-                            report_data[username]['projects'][project_code]['activities'][activity] = {
-                                'hours': 0.0,
-                                'dates': set()
-                            }
-                        report_data[username]['projects'][project_code]['activities'][activity]['hours'] += float(entry.hours)
-                        report_data[username]['projects'][project_code]['activities'][activity]['dates'].add(entry.spent_on)
-                    
-                    report_data[username]['projects'][project_code]['hours'] += float(entry.hours)
-                    report_data[username]['total_hours'] += float(entry.hours)
-                    report_data[username]['projects'][project_code]['dates'].add(entry.spent_on)
-                
-                # Convert dates to strings
-                for username in report_data:
-                    for project in report_data[username]['projects']:
-                        dates = sorted(report_data[username]['projects'][project]['dates'])
-                        report_data[username]['projects'][project]['date_str'] = ', '.join(d.strftime('%m/%d') for d in dates)
-                        for activity in report_data[username]['projects'][project]['activities']:
-                            act_dates = sorted(report_data[username]['projects'][project]['activities'][activity]['dates'])
-                            report_data[username]['projects'][project]['activities'][activity]['date_str'] = ', '.join(d.strftime('%m/%d') for d in act_dates)
+                # Process entries into report data
+                report_data = self.process_entries(entries)
                 
                 weekly_ranges.append({
                     'start': week_start,
@@ -182,11 +144,18 @@ class Command(BaseCommand):
                 
                 current = week_end + timedelta(days=1)
         else:
-            # Single week processing (unchanged)
+            # Single week processing
+            entries = TimeEntry.objects.filter(
+                spent_on__range=[start_date, end_date],
+                user_id__in=team_members
+            ).select_related('user', 'project', 'activity')
+            
+            report_data = self.process_entries(entries)
+            
             weekly_ranges = [{
                 'start': start_date,
                 'end': end_date,
-                'entries': report_data  # Your existing report_data processing
+                'entries': report_data
             }]
         
         # Generate the report content
@@ -205,6 +174,49 @@ class Command(BaseCommand):
             print("Failed to send report to", to_email)
             # Sleep here to give SMTP server time to recover
             time.sleep(15)
+
+    def process_entries(self, entries):
+        report_data = {}
+        for entry in entries:
+            username = '%s %s' % (entry.user.firstname, entry.user.lastname)
+            if username not in report_data:
+                report_data[username] = {
+                    'total_hours': 0.0,
+                    'projects': {}
+                }
+            
+            project_code = entry.project.identifier
+            if project_code not in report_data[username]['projects']:
+                report_data[username]['projects'][project_code] = {
+                    'hours': 0.0,
+                    'activities': {},
+                    'dates': set()
+                }
+            
+            activity = entry.comments or (entry.activity.name if entry.activity else '')
+            if activity:
+                if activity not in report_data[username]['projects'][project_code]['activities']:
+                    report_data[username]['projects'][project_code]['activities'][activity] = {
+                        'hours': 0.0,
+                        'dates': set()
+                    }
+                report_data[username]['projects'][project_code]['activities'][activity]['hours'] += float(entry.hours)
+                report_data[username]['projects'][project_code]['activities'][activity]['dates'].add(entry.spent_on)
+            
+            report_data[username]['projects'][project_code]['hours'] += float(entry.hours)
+            report_data[username]['total_hours'] += float(entry.hours)
+            report_data[username]['projects'][project_code]['dates'].add(entry.spent_on)
+        
+        # Convert dates to strings
+        for username in report_data:
+            for project in report_data[username]['projects']:
+                dates = sorted(report_data[username]['projects'][project]['dates'])
+                report_data[username]['projects'][project]['date_str'] = ', '.join(d.strftime('%m/%d') for d in dates)
+                for activity in report_data[username]['projects'][project]['activities']:
+                    act_dates = sorted(report_data[username]['projects'][project]['activities'][activity]['dates'])
+                    report_data[username]['projects'][project]['activities'][activity]['date_str'] = ', '.join(d.strftime('%m/%d') for d in act_dates)
+        
+        return report_data
 
     def handle(self, *args, **options):
         print("\n=== Starting Supervisor Report Generation ===")
