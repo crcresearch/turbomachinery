@@ -230,7 +230,7 @@ class Command(BaseCommand):
         
         # Group by person first
         for user_id, first_name, last_name in users_with_entries:
-            username = f"{first_name} {last_name}".strip() or f"User {user_id}"
+            username = "{0} {1}".format(first_name, last_name).strip() or "User {0}".format(user_id)
             
             # Get all entries for this user
             user_entries = TimeEntry.objects.filter(
