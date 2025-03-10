@@ -103,7 +103,7 @@ class Command(BaseCommand):
             time.sleep(15)  # Wait 15 seconds between emails to stay under rate limit
             return True
         except Exception as e:
-            print(f"Error sending email to {to_email}: {str(e)}")
+            print("Error sending email to %s: %s" % (to_email, str(e)))
             return False
 
     def send_supervisor_report(self, supervisor_name, start_date, end_date, report_data, options):
