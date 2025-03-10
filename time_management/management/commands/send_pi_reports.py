@@ -166,13 +166,23 @@ class Command(BaseCommand):
         msg['To'] = to_email
         list_of_recipients = [to_email]
 
-        # Create new SMTP connection for each email
-        smtp = smtplib.SMTP('dockerhost')
-        smtp.sendmail('noreply@turbo.crc.nd.edu', list_of_recipients, msg.as_string())
-        smtp.close()
-        
-        # Add longer delay between emails
-        time.sleep(5)  # Wait 5 seconds between emails
+        max_attempts = 3
+        for attempt in range(max_attempts):
+            try:
+                # Create new SMTP connection for each email
+                smtp = smtplib.SMTP('dockerhost')
+                smtp.sendmail('noreply@turbo.crc.nd.edu', list_of_recipients, msg.as_string())
+                smtp.close()
+                
+                # Add much longer delay between emails
+                time.sleep(10)  # Wait 10 seconds between emails
+                return
+            except Exception as e:
+                print("SMTP Error on attempt %d: %s" % (attempt + 1, str(e)))
+                if attempt < max_attempts - 1:
+                    time.sleep(20)  # Wait 20 seconds before retry
+                else:
+                    print("Failed to send email to %s after %d attempts" % (to_email, max_attempts))
 
     def handle(self, *args, **options):
         print("\n=== Starting PI Report Generation ===")
