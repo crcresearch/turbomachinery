@@ -302,21 +302,57 @@ class Command(BaseCommand):
         start_date = options.get('start_date')
         end_date = options.get('end_date')
         monthly = options.get('monthly', False)
-        
-        # Get supervisors
-        supervisors = User.objects.filter(groups__name='Supervisor')
-        self.stdout.write('\nFound {} supervisors\n'.format(len(supervisors)))
-        
-        for supervisor in supervisors:
-            self.stdout.write('\nProcessing supervisor: {}'.format(supervisor.email))
+        test_email = options.get('test_email')
+
+        try:
+            # Get supervisors using direct PostgreSQL query
+            connection = psycopg2.connect(
+                host='database1',
+                database='redmine',
+                user='postgres',
+                password="Let's go turbo!"
+            )
+            cursor = connection.cursor()
             
-            try:
+            if test_email:
+                # If test email provided, use it as the only supervisor
+                supervisors = [(test_email,)]
+            else:
+                # Get all supervisors from Redmine database
+                cursor.execute("""
+                    SELECT DISTINCT cv.value 
+                    FROM custom_values cv 
+                    JOIN custom_fields cf ON cf.id = cv.custom_field_id 
+                    WHERE cf.name = 'Supervisor Notification Emails'
+                    AND cv.value IS NOT NULL 
+                    AND cv.value != ''
+                    ORDER BY cv.value;
+                """)
+                supervisors = cursor.fetchall()
+            
+            self.stdout.write('\nFound {} supervisors\n'.format(len(supervisors)))
+            
+            for supervisor in supervisors:
+                supervisor_email = supervisor[0]
+                self.stdout.write('\nProcessing supervisor: {}'.format(supervisor_email))
+                
+                # Get team members for this supervisor
+                cursor.execute("""
+                    SELECT u.id 
+                    FROM users u
+                    JOIN custom_values cv ON cv.customized_id = u.id
+                    JOIN custom_fields cf ON cf.id = cv.custom_field_id
+                    WHERE cf.name = 'Supervisor Notification Emails'
+                    AND cv.value = %s;
+                """, [supervisor_email])
+                team_members = [row[0] for row in cursor.fetchall()]
+                
                 # Generate report content first
                 self.stdout.write('Processing {} report...'.format('monthly' if monthly else 'weekly'))
                 self.stdout.write('Generating email content...')
                 
                 subject, text_content, html_content = self.generate_report_content(
-                    supervisor, start_date, end_date, monthly
+                    supervisor_email, start_date, end_date, monthly
                 )
                 
                 # Then try to send email with retries
@@ -329,12 +365,12 @@ class Command(BaseCommand):
                             subject=subject,
                             message=text_content,
                             from_email=None,  # Uses DEFAULT_FROM_EMAIL
-                            recipient_list=[supervisor.email],
+                            recipient_list=[supervisor_email],
                             html_message=html_content,
                             fail_silently=False,
                         )
                         self.stdout.write(self.style.SUCCESS(
-                            'Successfully sent report to {}'.format(supervisor.email)
+                            'Successfully sent report to {}'.format(supervisor_email)
                         ))
                         break  # Exit retry loop on success
                         
@@ -342,22 +378,20 @@ class Command(BaseCommand):
                         if attempt < max_retries - 1:
                             self.stdout.write(self.style.WARNING(
                                 'Email attempt {} failed for {}, retrying in {} seconds... Error: {}'.format(
-                                    attempt + 1, supervisor.email, retry_delay, str(e)
+                                    attempt + 1, supervisor_email, retry_delay, str(e)
                                 )
                             ))
                             sleep(retry_delay)
                         else:
                             self.stdout.write(self.style.ERROR(
                                 'Failed to send email to {} after {} attempts. Error: {}'.format(
-                                    supervisor.email, max_retries, str(e)
+                                    supervisor_email, max_retries, str(e)
                                 )
                             ))
                             
-            except Exception as e:
-                self.stdout.write(self.style.ERROR(
-                    'Error processing report for {}: {}'.format(supervisor.email, str(e))
-                ))
-                continue  # Move to next supervisor on error
+        except Exception as e:
+            self.stdout.write(self.style.ERROR('Error: {}'.format(str(e))))
+            raise
 
     def generate_report_content(self, supervisor, start_date, end_date, monthly):
         # Existing report generation code...
