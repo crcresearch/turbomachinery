@@ -2,33 +2,33 @@
 <p>Report Period: {{ start_date|date:"M d, Y" }} - {{ end_date|date:"M d, Y" }}</p>
 
 <table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse; width: 100%;">
-    <tr style="background-color: #e6eef9;">
+    <tr style="background-color: #f5f5f5;">
         <td>Sum of Hours</td>
-        <td>Column Labels</td>
-        <td>Grand Total</td>
+        <td style="text-align: right;">Column Labels</td>
+        <td style="text-align: right;">Grand Total</td>
     </tr>
-    <tr style="background-color: #e6eef9;">
+    <tr style="background-color: #f5f5f5;">
         <td>Row Labels</td>
         <td style="text-align: right;">Hours</td>
         <td style="text-align: right;">Grand Total</td>
     </tr>
-    {% for username, user_data in entries.items %}
-    <tr style="background-color: #e6eef9;">
-        <td>{{ username }}</td>
-        <td style="text-align: right;">{{ user_data.total_hours }}</td>
-        <td style="text-align: right;">{{ user_data.total_hours }}</td>
+    {% for project_code, project_data in entries.items %}
+    <tr style="background-color: #e6f3ff;">
+        <td>{{ project_code }}</td>
+        <td style="text-align: right;">{{ project_data.total_hours }}</td>
+        <td style="text-align: right;">{{ project_data.total_hours }}</td>
     </tr>
-        {% for project_code, project_data in user_data.projects.items %}
+        {% for username, user_data in project_data.users.items %}
         <tr>
-            <td style="padding-left: 20px;">{{ project_code }}</td>
-            <td style="text-align: right;">{{ project_data.total_hours }}</td>
-            <td style="text-align: right;">{{ project_data.total_hours }}</td>
+            <td style="padding-left: 20px;">{{ username }}</td>
+            <td style="text-align: right;">{{ user_data.total_hours }}</td>
+            <td style="text-align: right;">{{ user_data.total_hours }}</td>
         </tr>
-            {% for activity, activity_data in project_data.activities.items %}
+            {% for activity, activity_data in user_data.activities.items %}
             <tr>
                 <td style="padding-left: 40px;">{{ activity }}</td>
-                <td style="text-align: right;">{{ activity_data.hours }}</td>
-                <td style="text-align: right;">{{ activity_data.hours }}</td>
+                <td style="text-align: right;">{{ activity_data.hours|floatformat:1 }}</td>
+                <td style="text-align: right;">{{ activity_data.hours|floatformat:1 }}</td>
             </tr>
             {% endfor %}
         {% endfor %}
