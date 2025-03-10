@@ -115,8 +115,10 @@ class Command(BaseCommand):
         # For monthly reports, break into weeks
         weekly_ranges = []
         if options.get('monthly'):
+            print("Processing monthly report...")
             current = start_date
             while current <= end_date:
+                print("Processing week starting %s" % current)
                 # Find Saturday (start of week)
                 week_start = current - timedelta(days=current.weekday() + 2)
                 if week_start < start_date:
@@ -127,12 +129,14 @@ class Command(BaseCommand):
                 if week_end > end_date:
                     week_end = end_date
                 
+                print("Fetching entries for %s to %s" % (week_start, week_end))
                 # Get entries for this week
                 entries = TimeEntry.objects.filter(
                     spent_on__range=[week_start, week_end],
                     user_id__in=team_members
                 ).select_related('user', 'project', 'activity')
                 
+                print("Processing %d entries" % entries.count())
                 # Process entries into report data
                 report_data = self.process_entries(entries)
                 
@@ -143,7 +147,9 @@ class Command(BaseCommand):
                 })
                 
                 current = week_end + timedelta(days=1)
+                print("Week processed")
         else:
+            print("Processing weekly report...")
             # Single week processing
             entries = TimeEntry.objects.filter(
                 spent_on__range=[start_date, end_date],
@@ -158,6 +164,7 @@ class Command(BaseCommand):
                 'entries': report_data
             }]
         
+        print("Generating email content...")
         # Generate the report content
         template = get_template('emails/supervisor_monthly_report.html')
         message = template.render({
@@ -167,8 +174,12 @@ class Command(BaseCommand):
             'weekly_ranges': weekly_ranges
         })
         
+        # Set subject based on report type
+        subject = 'Turbomachinery Lab Monthly Hours Report' if options.get('monthly') else 'Turbomachinery Lab Weekly Hours Report'
+        
+        print("Sending email...")
         # Send the email and check result
-        if self.send_notification(to_email, message, 'Turbomachinery Lab Monthly Hours Report'):
+        if self.send_notification(to_email, message, subject):
             print("Sent report to", to_email)
         else:
             print("Failed to send report to", to_email)

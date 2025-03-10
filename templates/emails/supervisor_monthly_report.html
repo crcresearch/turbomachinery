@@ -1,40 +1,39 @@
-<h2>Monthly Time Report for {{ supervisor_name }}</h2>
+<h2>NDTL Program Weekly Time Report</h2>
 <p>Report Period: {{ start_date|date:"M d, Y" }} - {{ end_date|date:"M d, Y" }}</p>
 
 {% for week in weekly_ranges %}
-<h3>Week of {{ week.start|date:"M d" }} - {{ week.end|date:"M d" }}</h3>
-{% if week.entries %}
 <table border="1" cellpadding="5" cellspacing="0">
     <tr>
-        <th>Employee</th>
-        <th>Project</th>
-        <th>Activities</th>
-        <th>Hours</th>
-        <th>Dates</th>
+        <th>Sum of Hours</th>
+        <th>Column Labels</th>
+        <th>Grand Total</th>
     </tr>
-    {% for username, user_data in week.entries.items %}
     <tr>
-        <td rowspan="{{ user_data.projects|length }}">
-            {{ username }}<br>
-            Total Hours: {{ user_data.total_hours }}
-        </td>
-        {% for project_code, project_data in user_data.projects.items %}
-        {% if not forloop.first %}</tr><tr>{% endif %}
-            <td>{{ project_code }}</td>
-            <td>
-                {% for activity, activity_data in project_data.activities.items %}
-                {{ activity }}: {{ activity_data.hours }} hours<br>
-                <small>{{ activity_data.date_str }}</small><br>
-                {% endfor %}
-            </td>
-            <td>{{ project_data.hours }}</td>
-            <td><small>{{ project_data.date_str }}</small></td>
-        {% endfor %}
+        <th>Row Labels</th>
+        <th>Hours</th>
+        <th>Grand Total</th>
     </tr>
+    {% for project_code, project_data in week.entries.items %}
+    <tr style="background-color: #f0f8ff;">
+        <td>{{ project_code }}</td>
+        <td>{{ project_data.total_hours }}</td>
+        <td>{{ project_data.total_hours }}</td>
+    </tr>
+        {% for username, user_data in project_data.users.items %}
+        <tr>
+            <td style="padding-left: 20px;">{{ username }}</td>
+            <td>{{ user_data.total_hours }}</td>
+            <td>{{ user_data.total_hours }}</td>
+        </tr>
+            {% for activity, hours in user_data.activities.items %}
+            <tr>
+                <td style="padding-left: 40px;">{{ activity }}</td>
+                <td>{{ hours }}</td>
+                <td>{{ hours }}</td>
+            </tr>
+            {% endfor %}
+        {% endfor %}
     {% endfor %}
 </table>
-{% else %}
-<p>No entries for this week.</p>
-{% endif %}
 <br>
 {% endfor %} 
