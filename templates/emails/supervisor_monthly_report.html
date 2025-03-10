@@ -21,6 +21,8 @@
         }
         .week-section {
             margin-bottom: 30px;
+            border-bottom: 2px solid #ccc;
+            padding-bottom: 20px;
         }
     </style>
 </head>
@@ -31,13 +33,71 @@
         {% for week_label, entries in weekly_data.items %}
             <div class="week-section">
                 <h3>{{ week_label }}</h3>
-                {% include "emails/time_entries_table.html" with entries=entries %}
+                {% if entries %}
+                    {% for person, data in entries.items %}
+                        <h4>{{ person }} - Total Hours: {{ data.total_hours|floatformat:2 }}</h4>
+                        {% if data.projects %}
+                            {% for project_code, project_data in data.projects.items %}
+                                <h5>Project: {{ project_code }} - Hours: {{ project_data.total_hours|floatformat:2 }}</h5>
+                                {% if project_data.activities %}
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th scope="col">Activity</th>
+                                                <th scope="col">Hours</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for activity, hours in project_data.activities.items %}
+                                                <tr>
+                                                    <td>{{ activity }}</td>
+                                                    <td>{{ hours|floatformat:2 }}</td>
+                                                </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                {% endif %}
+                            {% endfor %}
+                        {% endif %}
+                        <hr>
+                    {% endfor %}
+                {% else %}
+                    <p>No time entries found for this week.</p>
+                {% endif %}
             </div>
-        {% empty %}
-            <p>No time entries found for this period.</p>
         {% endfor %}
     {% else %}
-        {% include "emails/time_entries_table.html" with entries=entries %}
+        {% if entries %}
+            {% for person, data in entries.items %}
+                <h4>{{ person }} - Total Hours: {{ data.total_hours|floatformat:2 }}</h4>
+                {% if data.projects %}
+                    {% for project_code, project_data in data.projects.items %}
+                        <h5>Project: {{ project_code }} - Hours: {{ project_data.total_hours|floatformat:2 }}</h5>
+                        {% if project_data.activities %}
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th scope="col">Activity</th>
+                                        <th scope="col">Hours</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for activity, hours in project_data.activities.items %}
+                                        <tr>
+                                            <td>{{ activity }}</td>
+                                            <td>{{ hours|floatformat:2 }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
+                <hr>
+            {% endfor %}
+        {% else %}
+            <p>No time entries found for this period.</p>
+        {% endif %}
     {% endif %}
 </body>
 </html> 
