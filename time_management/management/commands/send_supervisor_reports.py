@@ -221,43 +221,56 @@ class Command(BaseCommand):
         return report_data
 
     def get_report_data(self, start_date, end_date):
-        # First, group by person
+        # First, get all users who have entries in this date range
+        users_with_entries = TimeEntry.objects.filter(
+            date__range=[start_date, end_date]
+        ).values_list('user', 'user__first_name', 'user__last_name').distinct()
+        
         entries = {}
         
-        time_entries = TimeEntry.objects.filter(
-            date__range=[start_date, end_date]
-        ).select_related('user', 'project').order_by('user__last_name', 'user__first_name')
-
         # Group by person first
-        for entry in time_entries:
-            username = entry.user.get_full_name() or entry.user.username
-            project_code = entry.project.code if entry.project else 'No Project'
-            activity = entry.activity or 'No Activity'
+        for user_id, first_name, last_name in users_with_entries:
+            username = f"{first_name} {last_name}".strip() or f"User {user_id}"
             
-            # Initialize user if not exists
-            if username not in entries:
-                entries[username] = {
-                    'total_hours': 0,
-                    'projects': {}
-                }
+            # Get all entries for this user
+            user_entries = TimeEntry.objects.filter(
+                user_id=user_id,
+                date__range=[start_date, end_date]
+            ).select_related('project').order_by('project__code')
             
-            # Initialize project if not exists
-            if project_code not in entries[username]['projects']:
-                entries[username]['projects'][project_code] = {
-                    'total_hours': 0,
-                    'activities': {}
-                }
+            # Initialize user data
+            user_total = 0
+            user_projects = {}
             
-            # Add hours
-            hours = float(entry.hours)
-            entries[username]['total_hours'] += hours
-            entries[username]['projects'][project_code]['total_hours'] += hours
+            # Process all entries for this user
+            for entry in user_entries:
+                project_code = entry.project.code if entry.project else 'No Project'
+                activity = entry.activity or 'No Activity'
+                hours = float(entry.hours)
+                
+                # Add to user total
+                user_total += hours
+                
+                # Add to project data
+                if project_code not in user_projects:
+                    user_projects[project_code] = {
+                        'total_hours': 0,
+                        'activities': {}
+                    }
+                
+                user_projects[project_code]['total_hours'] += hours
+                
+                # Add to activity data
+                if activity not in user_projects[project_code]['activities']:
+                    user_projects[project_code]['activities'][activity] = 0
+                user_projects[project_code]['activities'][activity] += hours
             
-            # Add activity hours
-            if activity not in entries[username]['projects'][project_code]['activities']:
-                entries[username]['projects'][project_code]['activities'][activity] = 0
-            entries[username]['projects'][project_code]['activities'][activity] += hours
-
+            # Add user data to entries
+            entries[username] = {
+                'total_hours': user_total,
+                'projects': user_projects
+            }
+        
         # Sort by username
         return dict(sorted(entries.items()))
 
