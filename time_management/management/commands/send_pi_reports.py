@@ -178,13 +178,12 @@ class Command(BaseCommand):
             return False
 
     def handle(self, *args, **options):
-        print("\n=== Starting PI Report Generation ===")
+        print "\n=== Starting PI Report Generation ==="
         
         start_date, end_date = self.get_report_dates(options.get('monthly', False), options)
-        print("\nDate Range: %s to %s" % (start_date, end_date))
+        print "\nDate Range: %s to %s" % (start_date, end_date)
         
         try:
-            # Connect to get Financial PIs
             connection = psycopg2.connect(
                 host='database1',
                 database='redmine',
@@ -192,55 +191,34 @@ class Command(BaseCommand):
                 password="Let's go turbo!"
             )
             cursor = connection.cursor()
-            
-            # First get all Financial PIs and their email mappings
+
+            # Get all projects and their Financial PI emails
             cursor.execute("""
-                SELECT DISTINCT p.identifier, 
-                       financial_pi.value as financial_pi_name,
-                       email.value as pi_email
+                SELECT DISTINCT cv.value as pi_email, 
+                       array_agg(p.identifier) as project_ids
                 FROM projects p
-                JOIN custom_values financial_pi 
-                    ON financial_pi.customized_id = p.id
-                JOIN custom_fields financial_pi_field 
-                    ON financial_pi_field.id = financial_pi.custom_field_id
-                LEFT JOIN custom_values email 
-                    ON email.customized_id = p.id
-                LEFT JOIN custom_fields email_field 
-                    ON email_field.id = email.custom_field_id
-                WHERE financial_pi_field.name = 'Financial PI'
-                AND email_field.name = 'PI Email'
+                JOIN custom_values cv ON cv.customized_id = p.id
+                JOIN custom_fields cf ON cf.id = cv.custom_field_id
+                WHERE cf.name = 'Financial PI'
                 AND p.status = 1
-                AND financial_pi.value IS NOT NULL 
-                AND financial_pi.value != '';
+                AND cv.value IS NOT NULL 
+                AND cv.value != ''
+                GROUP BY cv.value;
             """)
             pi_mappings = cursor.fetchall()
-
-            # Group projects by PI
-            pi_data = {}
-            for project_id, pi_name, pi_email in pi_mappings:
-                if pi_name not in pi_data:
-                    pi_data[pi_name] = {
-                        'email': pi_email if self.is_email(pi_email) else None,
-                        'projects': []
-                    }
-                pi_data[pi_name]['projects'].append(project_id)
-
-            # Process each PI
-            for pi_name, data in pi_data.items():
-                pi_email = data['email']
-                pi_projects = data['projects']
-
-                if not pi_email:
+            
+            for pi_email, project_ids in pi_mappings:
+                if not self.is_email(pi_email):
                     self.stdout.write(self.style.WARNING(
-                        'Skipping PI "{}" - no valid email found'.format(pi_name)
+                        'Skipping invalid email: %s' % pi_email
                     ))
                     continue
 
                 if options.get('test_email'):
                     pi_email = options.get('test_email')
 
-                self.stdout.write('\nProcessing Financial PI: {} ({})'.format(pi_name, pi_email))
-                self.stdout.write('Projects: {}'.format(', '.join(pi_projects)))
+                self.stdout.write('\nProcessing Financial PI: %s' % pi_email)
+                self.stdout.write('Projects: %s' % ', '.join(project_ids))
 
                 if options.get('monthly'):
                     # For monthly reports, break into weeks
@@ -259,7 +237,7 @@ class Command(BaseCommand):
                         week_label = "Week of {}".format(week_start.strftime("%b %d"))
                         
                         entries = TimeEntry.objects.filter(
-                            project__identifier__in=pi_projects,
+                            project__identifier__in=project_ids,
                             spent_on__range=[week_start, week_end]
                         ).select_related('user', 'project', 'activity')
                         
@@ -275,7 +253,7 @@ class Command(BaseCommand):
                 else:
                     # Weekly report
                     entries = TimeEntry.objects.filter(
-                        project__identifier__in=pi_projects,
+                        project__identifier__in=project_ids,
                         spent_on__range=[start_date, end_date]
                     ).select_related('user', 'project', 'activity')
 
@@ -295,13 +273,13 @@ class Command(BaseCommand):
                     )
 
                     self.send_notification(pi_email, html_content, subject)
-                    self.stdout.write(self.style.SUCCESS('Sent report to {}'.format(pi_email)))
+                    self.stdout.write(self.style.SUCCESS('Sent report to %s' % pi_email))
 
         except Exception as e:
-            self.stdout.write(self.style.ERROR('Error: {}'.format(str(e))))
+            self.stdout.write(self.style.ERROR('Error: %s' % str(e)))
             raise
         
-        print("\n=== PI Report Generation Complete ===\n")
+        print "\n=== PI Report Generation Complete ===\n"
 
     def process_entries(self, entries):
         report_data = {}
