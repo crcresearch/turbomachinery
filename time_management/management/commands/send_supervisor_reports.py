@@ -189,6 +189,7 @@ class Command(BaseCommand):
 
     def process_entries(self, entries):
         report_data = {}
+        
         for entry in entries:
             project_code = entry.project.identifier
             if project_code not in report_data:
@@ -197,7 +198,7 @@ class Command(BaseCommand):
                     'users': {}
                 }
             
-            username = '%s %s' % (entry.user.firstname, entry.user.lastname)
+            username = f"{entry.user.firstname} {entry.user.lastname}"
             if username not in report_data[project_code]['users']:
                 report_data[project_code]['users'][username] = {
                     'total_hours': 0.0,
@@ -206,23 +207,15 @@ class Command(BaseCommand):
             
             activity = entry.comments or (entry.activity.name if entry.activity else '')
             if activity:
-                if activity not in report_data[project_code]['users'][username]['activities']:
-                    report_data[project_code]['users'][username]['activities'][activity] = {
-                        'hours': 0.0,
-                        'dates': set()
-                    }
-                report_data[project_code]['users'][username]['activities'][activity]['hours'] += float(entry.hours)
-                report_data[project_code]['users'][username]['activities'][activity]['dates'].add(entry.spent_on)
-            
-            report_data[project_code]['users'][username]['total_hours'] += float(entry.hours)
-            report_data[project_code]['total_hours'] += float(entry.hours)
-        
-        # Convert dates to strings
-        for project_code in report_data:
-            for username in report_data[project_code]['users']:
-                for activity in report_data[project_code]['users'][username]['activities']:
-                    dates = sorted(report_data[project_code]['users'][username]['activities'][activity]['dates'])
-                    report_data[project_code]['users'][username]['activities'][activity]['date_str'] = ', '.join(d.strftime('%m/%d') for d in dates)
+                activity_key = activity.strip()
+                if activity_key not in report_data[project_code]['users'][username]['activities']:
+                    report_data[project_code]['users'][username]['activities'][activity_key] = 0.0  # Just store hours
+                
+                # Add hours
+                hours = float(entry.hours)
+                report_data[project_code]['users'][username]['activities'][activity_key] += hours
+                report_data[project_code]['users'][username]['total_hours'] += hours
+                report_data[project_code]['total_hours'] += hours
         
         return report_data
 
