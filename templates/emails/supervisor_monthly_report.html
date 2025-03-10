@@ -1,34 +1,34 @@
 <h2>NDTL Program {% if monthly %}Monthly{% else %}Weekly{% endif %} Time Report</h2>
 <p>Report Period: {{ start_date|date:"M d, Y" }} - {{ end_date|date:"M d, Y" }}</p>
 
-<table border="1" cellpadding="5" cellspacing="0">
-    <tr>
-        <th>Sum of Hours</th>
-        <th>Column Labels</th>
-        <th>Grand Total</th>
+<table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse; width: 100%;">
+    <tr style="background-color: #e6eef9;">
+        <td>Sum of Hours</td>
+        <td>Column Labels</td>
+        <td>Grand Total</td>
     </tr>
-    <tr>
-        <th>Row Labels</th>
-        <th>Hours</th>
-        <th>Grand Total</th>
+    <tr style="background-color: #e6eef9;">
+        <td>Row Labels</td>
+        <td style="text-align: right;">Hours</td>
+        <td style="text-align: right;">Grand Total</td>
     </tr>
-    {% for project_code, project_data in entries.items %}
-    <tr style="background-color: #f0f8ff;">
-        <td>{{ project_code }}</td>
-        <td>{{ project_data.total_hours }}</td>
-        <td>{{ project_data.total_hours }}</td>
+    {% for username, user_data in entries.items %}
+    <tr style="background-color: #e6eef9;">
+        <td>{{ username }}</td>
+        <td style="text-align: right;">{{ user_data.total_hours }}</td>
+        <td style="text-align: right;">{{ user_data.total_hours }}</td>
     </tr>
-        {% for username, user_data in project_data.users.items %}
+        {% for project_code, project_data in user_data.projects.items %}
         <tr>
-            <td style="padding-left: 20px;">{{ username }}</td>
-            <td>{{ user_data.total_hours }}</td>
-            <td>{{ user_data.total_hours }}</td>
+            <td style="padding-left: 20px;">{{ project_code }}</td>
+            <td style="text-align: right;">{{ project_data.total_hours }}</td>
+            <td style="text-align: right;">{{ project_data.total_hours }}</td>
         </tr>
-            {% for activity, activity_data in user_data.activities.items %}
+            {% for activity, activity_data in project_data.activities.items %}
             <tr>
                 <td style="padding-left: 40px;">{{ activity }}</td>
-                <td>{{ activity_data.hours }}</td>
-                <td>{{ activity_data.hours }}</td>
+                <td style="text-align: right;">{{ activity_data.hours }}</td>
+                <td style="text-align: right;">{{ activity_data.hours }}</td>
             </tr>
             {% endfor %}
         {% endfor %}
