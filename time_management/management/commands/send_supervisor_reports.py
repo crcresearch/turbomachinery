@@ -95,10 +95,25 @@ class Command(BaseCommand):
         msg['To'] = to_email
         list_of_recipients = [to_email]
 
-        # Send the message via dockerhost SMTP server
-        s = smtplib.SMTP('dockerhost')
-        s.sendmail('noreply@turbo.crc.nd.edu', list_of_recipients, msg.as_string())
-        s.quit()
+        max_retries = 3
+        retry_delay = 5  # seconds
+
+        for attempt in range(max_retries):
+            try:
+                # Send the message via dockerhost SMTP server
+                s = smtplib.SMTP('dockerhost')
+                s.sendmail('noreply@turbo.crc.nd.edu', list_of_recipients, msg.as_string())
+                s.quit()
+                time.sleep(2)  # Wait 2 seconds between emails
+                return
+            except Exception as e:
+                if attempt < max_retries - 1:
+                    print("SMTP Error: %s. Retrying in %d seconds..." % (str(e), retry_delay))
+                    time.sleep(retry_delay)
+                    retry_delay *= 2  # Double the delay for next retry
+                else:
+                    print("SMTP Error: %s" % str(e))
+                    raise
 
     def send_supervisor_report(self, supervisor_name, start_date, end_date, report_data, options):
         # Convert dates to strings
@@ -173,7 +188,7 @@ class Command(BaseCommand):
             self.send_notification(
                 options.get('test_email', supervisor_name),
                 html_content,
-                'NDTL Program %s Time Report (%s - %s)' % (
+                'NDTL Supervisor %s Time Report (%s - %s)' % (
                     'Monthly' if options.get('monthly') else 'Weekly',
                     start_date.strftime('%b %d'),
                     end_date.strftime('%b %d')
