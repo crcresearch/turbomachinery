@@ -165,13 +165,17 @@ class Command(BaseCommand):
         msg['From'] = 'noreply@turbo.crc.nd.edu'
         msg['To'] = to_email
         msg['Subject'] = message_subject
-
         msg.attach(MIMEText(message_body, 'html'))
 
-        smtp = smtplib.SMTP('dockerhost')
-        smtp.sendmail('noreply@turbo.crc.nd.edu', to_email, msg.as_string())
-        smtp.close()
-        time.sleep(10)  # Keep the delay
+        try:
+            smtp = smtplib.SMTP('dockerhost')
+            smtp.sendmail('noreply@turbo.crc.nd.edu', to_email, msg.as_string())
+            smtp.close()
+            time.sleep(15)  # Wait 15 seconds between emails to stay under rate limit
+            return True
+        except Exception as e:
+            print(f"Error sending email to {to_email}: {str(e)}")
+            return False
 
     def handle(self, *args, **options):
         print("\n=== Starting PI Report Generation ===")
