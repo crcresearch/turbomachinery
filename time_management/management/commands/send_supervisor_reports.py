@@ -106,7 +106,7 @@ class Command(BaseCommand):
             print("Error sending email to %s: %s" % (to_email, str(e)))
             return False
 
-    def send_supervisor_report(self, supervisor_email, start_date, end_date, options):
+    def send_supervisor_report(self, supervisor_email, start_date, end_date, options, team_members):
         print("\nProcessing supervisor:", supervisor_email)
         
         # If test_email is set, use that instead of actual supervisor email
@@ -257,59 +257,12 @@ class Command(BaseCommand):
                 team_members = [row[0] for row in cursor.fetchall()]
                 
                 if team_members:
-                    # Get entries using Django ORM
-                    entries = TimeEntry.objects.filter(
-                        user_id__in=team_members,
-                        spent_on__range=[start_date, end_date]
-                    ).select_related('user', 'project', 'activity')
-                    
-                    # Generate report data
-                    report_data = {}
-                    for entry in entries:
-                        username = '%s %s' % (entry.user.firstname, entry.user.lastname)
-                        if username not in report_data:
-                            report_data[username] = {
-                                'total_hours': 0.0,
-                                'projects': {}
-                            }
-                        
-                        project_code = entry.project.identifier
-                        if project_code not in report_data[username]['projects']:
-                            report_data[username]['projects'][project_code] = {
-                                'hours': 0.0,
-                                'activities': {},
-                                'dates': set()
-                            }
-                        
-                        activity = entry.comments or (entry.activity.name if entry.activity else '')
-                        if activity:
-                            if activity not in report_data[username]['projects'][project_code]['activities']:
-                                report_data[username]['projects'][project_code]['activities'][activity] = {
-                                    'hours': 0.0,
-                                    'dates': set()
-                                }
-                            report_data[username]['projects'][project_code]['activities'][activity]['hours'] += float(entry.hours)
-                            report_data[username]['projects'][project_code]['activities'][activity]['dates'].add(entry.spent_on)
-                        
-                        report_data[username]['projects'][project_code]['hours'] += float(entry.hours)
-                        report_data[username]['total_hours'] += float(entry.hours)
-                        report_data[username]['projects'][project_code]['dates'].add(entry.spent_on)
-                    
-                    # Convert dates to strings
-                    for username in report_data:
-                        for project in report_data[username]['projects']:
-                            dates = sorted(report_data[username]['projects'][project]['dates'])
-                            report_data[username]['projects'][project]['date_str'] = ', '.join(d.strftime('%m/%d') for d in dates)
-                            for activity in report_data[username]['projects'][project]['activities']:
-                                act_dates = sorted(report_data[username]['projects'][project]['activities'][activity]['dates'])
-                                report_data[username]['projects'][project]['activities'][activity]['date_str'] = ', '.join(d.strftime('%m/%d') for d in act_dates)
-                    
-                    # Generate HTML content
                     self.send_supervisor_report(
                         supervisor_email,
                         start_date,
                         end_date,
-                        options
+                        options,
+                        team_members
                     )
             
         except Exception as e:
