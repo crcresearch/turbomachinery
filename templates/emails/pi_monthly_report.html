@@ -1,0 +1,89 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .total {
+            font-weight: bold;
+        }
+        .week-section {
+            margin-bottom: 30px;
+            border-bottom: 2px solid #ccc;
+            padding-bottom: 20px;
+        }
+        .project-section {
+            margin-bottom: 20px;
+        }
+        .indent {
+            margin-left: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h2>Time Report: {{ start_date|date:"M d, Y" }} - {{ end_date|date:"M d, Y" }}</h2>
+
+    {% if monthly %}
+        {% for week_label, entries in weekly_data.items %}
+            <div class="week-section">
+                <h3>{{ week_label }}</h3>
+                {% if entries %}
+                    {% for project_code, project_data in entries.items %}
+                        <div class="project-section">
+                            <h4>Project: {{ project_code }} - Total Hours: {{ project_data.total_hours|floatformat:2 }}</h4>
+                            {% for person, person_data in project_data.users.items %}
+                                <div class="indent">
+                                    <h5>{{ person }} - Hours: {{ person_data.hours|floatformat:2 }}</h5>
+                                    {% if person_data.activities %}
+                                        <div class="indent">
+                                            {% for activity, activity_data in person_data.activities.items %}
+                                                <p>{{ activity }}: {{ activity_data.hours|floatformat:2 }}</p>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <p>No time entries found for this week.</p>
+                {% endif %}
+            </div>
+        {% endfor %}
+    {% else %}
+        {% if entries %}
+            {% for project_code, project_data in entries.items %}
+                <div class="project-section">
+                    <h4>Project: {{ project_code }} - Total Hours: {{ project_data.total_hours|floatformat:2 }}</h4>
+                    {% for person, person_data in project_data.users.items %}
+                        <div class="indent">
+                            <h5>{{ person }} - Hours: {{ person_data.hours|floatformat:2 }}</h5>
+                            {% if person_data.activities %}
+                                <div class="indent">
+                                    {% for activity, activity_data in person_data.activities.items %}
+                                        <p>{{ activity }}: {{ activity_data.hours|floatformat:2 }}</p>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endfor %}
+        {% else %}
+            <p>No time entries found for this period.</p>
+        {% endif %}
+    {% endif %}
+</body>
+</html> 
