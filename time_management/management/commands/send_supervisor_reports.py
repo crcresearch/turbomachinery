@@ -312,13 +312,13 @@ class Command(BaseCommand):
             end_date = today - timedelta(days=(today.weekday() + 3) % 7)  # Previous Friday
             start_date = end_date - timedelta(days=6)  # Previous Saturday
 
+        monthly = options.get('monthly', False)
         test_email = options.get('test_email')
 
         try:
             # For testing, just use the test email
             if test_email:
                 supervisors = [test_email]
-                # Get all users for test email
                 team_members = RedmineUser.objects.filter(status=1)  # Active users
             else:
                 # Get supervisors using direct PostgreSQL query
@@ -359,30 +359,54 @@ class Command(BaseCommand):
                 self.stdout.write('\nProcessing supervisor: {}'.format(supervisor_email))
 
                 if team_members:
-                    # Get time entries for team members
-                    entries = TimeEntry.objects.filter(
-                        user__in=team_members,
-                        spent_on__range=[start_date, end_date]
-                    ).select_related('user', 'project', 'activity')
+                    if monthly:
+                        # For monthly reports, break into weeks
+                        weekly_data = {}
+                        current_date = start_date
+                        while current_date <= end_date:
+                            week_end = min(current_date + timedelta(days=6), end_date)
+                            week_label = "Week of {}".format(current_date.strftime("%b %d"))
+                            
+                            # Get entries for this week
+                            entries = TimeEntry.objects.filter(
+                                user__in=team_members,
+                                spent_on__range=[current_date, week_end]
+                            ).select_related('user', 'project', 'activity')
+                            
+                            if entries.exists():
+                                weekly_data[week_label] = self.process_entries(entries)
+                            
+                            current_date = week_end + timedelta(days=1)
 
-                    # Process entries into report data
-                    report_data = self.process_entries(entries)
+                        context = {
+                            'weekly_data': weekly_data,
+                            'start_date': start_date,
+                            'end_date': end_date,
+                            'monthly': True
+                        }
+                    else:
+                        # Weekly report (existing code)
+                        entries = TimeEntry.objects.filter(
+                            user__in=team_members,
+                            spent_on__range=[start_date, end_date]
+                        ).select_related('user', 'project', 'activity')
 
-                    # Generate and send email
-                    subject = 'NDTL Time Report ({} - {})'.format(
-                        start_date.strftime('%b %d'),
-                        end_date.strftime('%b %d')
-                    )
-
-                    context = {
-                        'entries': report_data,
-                        'start_date': start_date,
-                        'end_date': end_date
-                    }
+                        context = {
+                            'entries': self.process_entries(entries),
+                            'start_date': start_date,
+                            'end_date': end_date,
+                            'monthly': False
+                        }
 
                     html_content = render_to_string(
                         'emails/supervisor_monthly_report.html', 
                         context
+                    )
+
+                    subject = 'NDTL {} Time Report ({} - {})'.format(
+                        'Monthly' if monthly else 'Weekly',
+                        start_date.strftime('%b %d'),
+                        end_date.strftime('%b %d')
                     )
 
                     self.send_notification(
