@@ -13,6 +13,7 @@ from email.mime.text import MIMEText
 import psycopg2
 import time
 from email.mime.multipart import MIMEMultipart
+from time import sleep
 
 logger = logging.getLogger(__name__)
 
@@ -242,29 +243,42 @@ class Command(BaseCommand):
             supervisors = cursor.fetchall()
             print("\nFound %d supervisors" % len(supervisors))
             
-            for supervisor in supervisors:
-                supervisor_email = supervisor[0]
-                print("\nProcessing supervisor: %s" % supervisor_email)
-                
-                # Get team members for this supervisor
-                cursor.execute("""
-                    SELECT u.id 
-                    FROM users u
-                    JOIN custom_values cv ON cv.customized_id = u.id
-                    JOIN custom_fields cf ON cf.id = cv.custom_field_id
-                    WHERE cf.name = 'Supervisor Notification Emails'
-                    AND cv.value = %s;
-                """, [supervisor_email])
-                team_members = [row[0] for row in cursor.fetchall()]
-                
-                if team_members:
-                    self.send_supervisor_report(
-                        supervisor_email,
-                        start_date,
-                        end_date,
-                        options,
-                        team_members
-                    )
+            # Modified email sending with retry logic
+            max_retries = 3
+            retry_delay = 30  # seconds
+
+            for attempt in range(max_retries):
+                try:
+                    for supervisor in supervisors:
+                        supervisor_email = supervisor[0]
+                        print("\nProcessing supervisor: %s" % supervisor_email)
+                        
+                        # Get team members for this supervisor
+                        cursor.execute("""
+                            SELECT u.id 
+                            FROM users u
+                            JOIN custom_values cv ON cv.customized_id = u.id
+                            JOIN custom_fields cf ON cf.id = cv.custom_field_id
+                            WHERE cf.name = 'Supervisor Notification Emails'
+                            AND cv.value = %s;
+                        """, [supervisor_email])
+                        team_members = [row[0] for row in cursor.fetchall()]
+                        
+                        if team_members:
+                            self.send_supervisor_report(
+                                supervisor_email,
+                                start_date,
+                                end_date,
+                                options,
+                                team_members
+                            )
+                    break  # Exit loop if email sent successfully
+                except Exception as e:
+                    if attempt < max_retries - 1:
+                        self.stdout.write(self.style.WARNING(f'Attempt {attempt + 1} failed, retrying in {retry_delay} seconds...'))
+                        sleep(retry_delay)
+                    else:
+                        self.stdout.write(self.style.ERROR(f'Failed to send email after {max_retries} attempts. Error: {str(e)}'))
             
         except Exception as e:
             print("ERROR: %s" % str(e))
