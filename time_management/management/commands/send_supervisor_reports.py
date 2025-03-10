@@ -198,7 +198,7 @@ class Command(BaseCommand):
                     'users': {}
                 }
             
-            username = f"{entry.user.firstname} {entry.user.lastname}"
+            username = '%s %s' % (entry.user.firstname, entry.user.lastname)
             if username not in report_data[project_code]['users']:
                 report_data[project_code]['users'][username] = {
                     'total_hours': 0.0,
