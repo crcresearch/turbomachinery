@@ -19,39 +19,25 @@
         .total {
             font-weight: bold;
         }
+        .week-section {
+            margin-bottom: 30px;
+        }
     </style>
 </head>
 <body>
     <h2>Time Report: {{ start_date|date:"M d, Y" }} - {{ end_date|date:"M d, Y" }}</h2>
 
-    {% if entries %}
-        {% for person, data in entries.items %}
-            <h3>{{ person }} - Total Hours: {{ data.total_hours|floatformat:2 }}</h3>
-            
-            {% if data.projects %}
-                {% for project_code, project_data in data.projects.items %}
-                    <h4>Project: {{ project_code }} - Hours: {{ project_data.total_hours|floatformat:2 }}</h4>
-                    
-                    {% if project_data.activities %}
-                        <table>
-                            <tr>
-                                <th>Activity</th>
-                                <th>Hours</th>
-                            </tr>
-                            {% for activity, hours in project_data.activities.items %}
-                                <tr>
-                                    <td>{{ activity }}</td>
-                                    <td>{{ hours|floatformat:2 }}</td>
-                                </tr>
-                            {% endfor %}
-                        </table>
-                    {% endif %}
-                {% endfor %}
-            {% endif %}
-            <hr>
+    {% if monthly %}
+        {% for week_label, entries in weekly_data.items %}
+            <div class="week-section">
+                <h3>{{ week_label }}</h3>
+                {% include "emails/time_entries_table.html" with entries=entries %}
+            </div>
+        {% empty %}
+            <p>No time entries found for this period.</p>
         {% endfor %}
     {% else %}
-        <p>No time entries found for this period.</p>
+        {% include "emails/time_entries_table.html" with entries=entries %}
     {% endif %}
 </body>
 </html> 
