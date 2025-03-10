@@ -172,6 +172,7 @@ class Command(BaseCommand):
         s = smtplib.SMTP('dockerhost')
         s.sendmail('noreply@turbo.crc.nd.edu', list_of_recipients, msg.as_string())
         s.quit()
+        time.sleep(10)  # Add 1 second delay between emails
 
     def handle(self, *args, **options):
         print("\n=== Starting PI Report Generation ===")

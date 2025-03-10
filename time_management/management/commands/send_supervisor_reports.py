@@ -101,6 +101,7 @@ class Command(BaseCommand):
         s = smtplib.SMTP('dockerhost')
         s.sendmail('noreply@turbo.crc.nd.edu', list_of_recipients, msg.as_string())
         s.quit()
+        time.sleep(10)  # Add 1 second delay between emails
 
     def send_supervisor_report(self, supervisor_name, start_date, end_date, report_data, options):
         # Convert dates to strings
