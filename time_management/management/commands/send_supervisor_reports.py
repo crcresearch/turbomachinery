@@ -221,58 +221,51 @@ class Command(BaseCommand):
         return report_data
 
     def get_report_data(self, start_date, end_date):
-        # First, get all users who have entries in this date range
-        users_with_entries = TimeEntry.objects.filter(
-            date__range=[start_date, end_date]
-        ).values_list('user', 'user__first_name', 'user__last_name').distinct()
-        
         entries = {}
+        total_hours = 0
         
-        # Group by person first
-        for user_id, first_name, last_name in users_with_entries:
-            username = "{0} {1}".format(first_name, last_name).strip() or "User {0}".format(user_id)
+        # Get all time entries for the period
+        time_entries = TimeEntry.objects.filter(
+            date__range=[start_date, end_date]
+        ).select_related('user', 'project').order_by('user__last_name', 'user__first_name', 'project__code')
+
+        # First pass - collect all user totals
+        for entry in time_entries:
+            username = "{0} {1}".format(entry.user.first_name, entry.user.last_name).strip()
+            project_code = entry.project.code if entry.project else 'No Project'
+            hours = float(entry.hours)
+            total_hours += hours
+
+            if username not in entries:
+                entries[username] = {
+                    'total_hours': 0,
+                    'projects': {}
+                }
             
-            # Get all entries for this user
-            user_entries = TimeEntry.objects.filter(
-                user_id=user_id,
-                date__range=[start_date, end_date]
-            ).select_related('project').order_by('project__code')
+            entries[username]['total_hours'] += hours
             
-            # Initialize user data
-            user_total = 0
-            user_projects = {}
+            if project_code not in entries[username]['projects']:
+                entries[username]['projects'][project_code] = {
+                    'total_hours': 0,
+                    'activities': {}
+                }
             
-            # Process all entries for this user
-            for entry in user_entries:
-                project_code = entry.project.code if entry.project else 'No Project'
-                activity = entry.activity or 'No Activity'
-                hours = float(entry.hours)
-                
-                # Add to user total
-                user_total += hours
-                
-                # Add to project data
-                if project_code not in user_projects:
-                    user_projects[project_code] = {
-                        'total_hours': 0,
-                        'activities': {}
-                    }
-                
-                user_projects[project_code]['total_hours'] += hours
-                
-                # Add to activity data
-                if activity not in user_projects[project_code]['activities']:
-                    user_projects[project_code]['activities'][activity] = 0
-                user_projects[project_code]['activities'][activity] += hours
+            entries[username]['projects'][project_code]['total_hours'] += hours
             
-            # Add user data to entries
-            entries[username] = {
-                'total_hours': user_total,
-                'projects': user_projects
-            }
-        
-        # Sort by username
-        return dict(sorted(entries.items()))
+            activity = entry.activity or 'No Activity'
+            if activity not in entries[username]['projects'][project_code]['activities']:
+                entries[username]['projects'][project_code]['activities'][activity] = 0
+            entries[username]['projects'][project_code]['activities'][activity] += hours
+
+        # Sort by total hours descending
+        sorted_entries = {}
+        for username in sorted(entries.keys(), key=lambda x: entries[x]['total_hours'], reverse=True):
+            sorted_entries[username] = entries[username]
+
+        return {
+            'total_hours': total_hours,
+            'entries': sorted_entries
+        }
 
     def handle(self, *args, **options):
         print("\n=== Starting Supervisor Report Generation ===")
