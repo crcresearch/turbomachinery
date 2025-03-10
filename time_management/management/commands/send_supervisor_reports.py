@@ -222,50 +222,53 @@ class Command(BaseCommand):
 
     def get_report_data(self, start_date, end_date):
         entries = {}
-        total_hours = 0
         
-        # Get all time entries for the period
-        time_entries = TimeEntry.objects.filter(
+        # Get all users first
+        users = TimeEntry.objects.filter(
             date__range=[start_date, end_date]
-        ).select_related('user', 'project').order_by('user__last_name', 'user__first_name', 'project__code')
-
-        # First pass - collect all user totals
-        for entry in time_entries:
-            username = "{0} {1}".format(entry.user.first_name, entry.user.last_name).strip()
-            project_code = entry.project.code if entry.project else 'No Project'
-            hours = float(entry.hours)
-            total_hours += hours
-
-            if username not in entries:
-                entries[username] = {
-                    'total_hours': 0,
-                    'projects': {}
-                }
+        ).values('user', 'user__first_name', 'user__last_name').distinct()
+        
+        # Group by person first
+        for user in users:
+            full_name = "{0} {1}".format(user['user__first_name'], user['user__last_name']).strip()
             
-            entries[username]['total_hours'] += hours
+            # Get all entries for this user
+            user_entries = TimeEntry.objects.filter(
+                user_id=user['user'],
+                date__range=[start_date, end_date]
+            ).select_related('project').order_by('project__code')
             
-            if project_code not in entries[username]['projects']:
-                entries[username]['projects'][project_code] = {
-                    'total_hours': 0,
-                    'activities': {}
-                }
+            if not user_entries:
+                continue
             
-            entries[username]['projects'][project_code]['total_hours'] += hours
+            # Calculate user total
+            user_total = sum(entry.hours for entry in user_entries)
             
-            activity = entry.activity or 'No Activity'
-            if activity not in entries[username]['projects'][project_code]['activities']:
-                entries[username]['projects'][project_code]['activities'][activity] = 0
-            entries[username]['projects'][project_code]['activities'][activity] += hours
-
-        # Sort by total hours descending
-        sorted_entries = {}
-        for username in sorted(entries.keys(), key=lambda x: entries[x]['total_hours'], reverse=True):
-            sorted_entries[username] = entries[username]
-
-        return {
-            'total_hours': total_hours,
-            'entries': sorted_entries
-        }
+            # Initialize user in entries dict
+            entries[full_name] = {
+                'total_hours': user_total,
+                'projects': {}
+            }
+            
+            # Group user's entries by project
+            for entry in user_entries:
+                project_code = entry.project.code if entry.project else 'No Project'
+                activity = entry.activity or 'No Activity'
+                
+                if project_code not in entries[full_name]['projects']:
+                    entries[full_name]['projects'][project_code] = {
+                        'total_hours': 0,
+                        'activities': {}
+                    }
+                
+                entries[full_name]['projects'][project_code]['total_hours'] += entry.hours
+                
+                if activity not in entries[full_name]['projects'][project_code]['activities']:
+                    entries[full_name]['projects'][project_code]['activities'][activity] = 0
+                entries[full_name]['projects'][project_code]['activities'][activity] += entry.hours
+        
+        # Sort by user name
+        return dict(sorted(entries.items()))
 
     def handle(self, *args, **options):
         print("\n=== Starting Supervisor Report Generation ===")
