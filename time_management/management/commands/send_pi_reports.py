@@ -161,6 +161,7 @@ class Command(BaseCommand):
 
     def send_notification(self, to_email, message_body, message_subject):
         msg = MIMEText(message_body, 'html')
+
         msg['Subject'] = message_subject
         msg['From'] = 'noreply@turbo.crc.nd.edu'
         msg['To'] = to_email
