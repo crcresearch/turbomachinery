@@ -106,86 +106,105 @@ class Command(BaseCommand):
             print("Error sending email to %s: %s" % (to_email, str(e)))
             return False
 
-    def send_supervisor_report(self, supervisor_name, start_date, end_date, report_data, options):
-        # Convert dates to strings
-        for username, user_data in report_data.items():
-            for project_code, project_data in user_data['projects'].items():
-                dates = sorted(project_data['dates'])
-                project_data['date_str'] = ', '.join(d.strftime('%m/%d') for d in dates)
-                for activity in project_data['activities']:
-                    act_dates = sorted(project_data['activities'][activity]['dates'])
-                    project_data['activities'][activity]['date_str'] = ', '.join(d.strftime('%m/%d') for d in act_dates)
+    def send_supervisor_report(self, supervisor_email, start_date, end_date, options):
+        print("\nProcessing supervisor:", supervisor_email)
         
-        # Choose template based on report type
-        template_name = 'emails/supervisor_monthly.html' if options.get('monthly') else 'emails/supervisor_weekly.html'
+        # If test_email is set, use that instead of actual supervisor email
+        to_email = options.get('test_email', supervisor_email)
         
+        # For monthly reports, break into weeks
+        weekly_ranges = []
         if options.get('monthly'):
-            # Group data by weeks for monthly report
-            weekly_data = {}
-            for username, user_data in report_data.items():
-                for project_code, project_data in user_data['projects'].items():
-                    for date in project_data['dates']:
-                        week_start = date - timedelta(days=date.weekday())
-                        if week_start not in weekly_data:
-                            weekly_data[week_start] = {}
-                        if username not in weekly_data[week_start]:
-                            weekly_data[week_start][username] = {
-                                'total_hours': 0.0,
-                                'projects': {}
-                            }
-                        if project_code not in weekly_data[week_start][username]['projects']:
-                            weekly_data[week_start][username]['projects'][project_code] = {
+            current = start_date
+            while current <= end_date:
+                # Find Saturday (start of week)
+                week_start = current - timedelta(days=current.weekday() + 2)
+                if week_start < start_date:
+                    week_start = start_date
+                    
+                # Find Friday (end of week)
+                week_end = week_start + timedelta(days=6)
+                if week_end > end_date:
+                    week_end = end_date
+                
+                # Get entries for this week
+                entries = TimeEntry.objects.filter(
+                    spent_on__range=[week_start, week_end],
+                    user_id__in=team_members
+                ).select_related('user', 'project', 'activity')
+                
+                # Process entries into the same format as before
+                report_data = {}
+                for entry in entries:
+                    username = '%s %s' % (entry.user.firstname, entry.user.lastname)
+                    if username not in report_data:
+                        report_data[username] = {
+                            'total_hours': 0.0,
+                            'projects': {}
+                        }
+                    
+                    project_code = entry.project.identifier
+                    if project_code not in report_data[username]['projects']:
+                        report_data[username]['projects'][project_code] = {
+                            'hours': 0.0,
+                            'activities': {},
+                            'dates': set()
+                        }
+                    
+                    activity = entry.comments or (entry.activity.name if entry.activity else '')
+                    if activity:
+                        if activity not in report_data[username]['projects'][project_code]['activities']:
+                            report_data[username]['projects'][project_code]['activities'][activity] = {
                                 'hours': 0.0,
-                                'activities': {},
                                 'dates': set()
                             }
-                        
-                        # Copy activities for this week
-                        for activity, activity_data in project_data['activities'].items():
-                            if any(d.isocalendar()[1] == week_start.isocalendar()[1] for d in activity_data['dates']):
-                                if activity not in weekly_data[week_start][username]['projects'][project_code]['activities']:
-                                    weekly_data[week_start][username]['projects'][project_code]['activities'][activity] = {
-                                        'hours': 0.0,
-                                    }
-                                weekly_data[week_start][username]['projects'][project_code]['activities'][activity] = activity_data
-                                weekly_data[week_start][username]['projects'][project_code]['hours'] += activity_data['hours']
-                                weekly_data[week_start][username]['total_hours'] += activity_data['hours']
-                                weekly_data[week_start][username]['projects'][project_code]['dates'].update(activity_data['dates'])
-            
-            context = {
-                'supervisor_name': supervisor_name,
-                'start_date': start_date,
-                'end_date': end_date,
-                'entries': [
-                    {'week_start': week, 'list': data}
-                    for week, data in sorted(weekly_data.items())
-                ]
-            }
+                        report_data[username]['projects'][project_code]['activities'][activity]['hours'] += float(entry.hours)
+                        report_data[username]['projects'][project_code]['activities'][activity]['dates'].add(entry.spent_on)
+                    
+                    report_data[username]['projects'][project_code]['hours'] += float(entry.hours)
+                    report_data[username]['total_hours'] += float(entry.hours)
+                    report_data[username]['projects'][project_code]['dates'].add(entry.spent_on)
+                
+                # Convert dates to strings
+                for username in report_data:
+                    for project in report_data[username]['projects']:
+                        dates = sorted(report_data[username]['projects'][project]['dates'])
+                        report_data[username]['projects'][project]['date_str'] = ', '.join(d.strftime('%m/%d') for d in dates)
+                        for activity in report_data[username]['projects'][project]['activities']:
+                            act_dates = sorted(report_data[username]['projects'][project]['activities'][activity]['dates'])
+                            report_data[username]['projects'][project]['activities'][activity]['date_str'] = ', '.join(d.strftime('%m/%d') for d in act_dates)
+                
+                weekly_ranges.append({
+                    'start': week_start,
+                    'end': week_end,
+                    'entries': report_data
+                })
+                
+                current = week_end + timedelta(days=1)
         else:
-            # Weekly report uses data as-is
-            context = {
-                'supervisor_name': supervisor_name,
-                'start_date': start_date,
-                'end_date': end_date,
-                'report_data': report_data
-            }
+            # Single week processing (unchanged)
+            weekly_ranges = [{
+                'start': start_date,
+                'end': end_date,
+                'entries': report_data  # Your existing report_data processing
+            }]
         
-        html_content = render_to_string(template_name, context)
+        # Generate the report content
+        template = get_template('notification_emails/supervisor_monthly_report.html')
+        message = template.render({
+            'supervisor_name': supervisor_email,
+            'start_date': start_date,
+            'end_date': end_date,
+            'weekly_ranges': weekly_ranges
+        })
         
-        if options.get('print') and not options.get('test_email'):
-            print("\nReport Content for %s:" % supervisor_name)
-            print(html_content)
+        # Send the email and check result
+        if self.send_notification(to_email, message, 'Turbomachinery Lab Monthly Hours Report'):
+            print("Sent report to", to_email)
         else:
-            self.send_notification(
-                options.get('test_email', supervisor_name),
-                html_content,
-                'NDTL Supervisor %s Time Report (%s - %s)' % (
-                    'Monthly' if options.get('monthly') else 'Weekly',
-                    start_date.strftime('%b %d'),
-                    end_date.strftime('%b %d')
-                )
-            )
-            print("Sent report to %s" % (options.get('test_email', supervisor_name)))
+            print("Failed to send report to", to_email)
+            # Sleep here to give SMTP server time to recover
+            time.sleep(15)
 
     def handle(self, *args, **options):
         print("\n=== Starting Supervisor Report Generation ===")
@@ -278,7 +297,6 @@ class Command(BaseCommand):
                         supervisor_email,
                         start_date,
                         end_date,
-                        report_data,
                         options
                     )
             
