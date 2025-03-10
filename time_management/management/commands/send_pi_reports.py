@@ -167,12 +167,18 @@ class Command(BaseCommand):
         msg['To'] = to_email
         list_of_recipients = [to_email]
 
-        # Send the message via our own SMTP server, but don't include the
-        # envelope header.
-        s = smtplib.SMTP('dockerhost')
-        s.sendmail('noreply@turbo.crc.nd.edu', list_of_recipients, msg.as_string())
-        s.quit()
-        time.sleep(10)  # Add 1 second delay between emails
+        try:
+            # Add initial delay before first email attempt
+            time.sleep(30)  # Wait 30 seconds before starting
+            
+            # Send the message via our own SMTP server, but don't include the
+            # envelope header.
+            s = smtplib.SMTP('dockerhost')
+            s.sendmail('noreply@turbo.crc.nd.edu', list_of_recipients, msg.as_string())
+            s.close()
+            time.sleep(10)  # Keep 10 second delay between emails
+        except Exception as e:
+            print("Error sending email to %s: %s" % (to_email, str(e)))
 
     def handle(self, *args, **options):
         print("\n=== Starting PI Report Generation ===")

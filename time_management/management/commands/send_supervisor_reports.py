@@ -96,12 +96,15 @@ class Command(BaseCommand):
         msg['To'] = to_email
         list_of_recipients = [to_email]
 
-        # Send the message via our own SMTP server, but don't include the
-        # envelope header.
-        s = smtplib.SMTP('dockerhost')
-        s.sendmail('noreply@turbo.crc.nd.edu', list_of_recipients, msg.as_string())
-        s.quit()
-        time.sleep(10)  # Add 1 second delay between emails
+        try:
+            # Send the message via our own SMTP server, but don't include the
+            # envelope header.
+            s = smtplib.SMTP('dockerhost')
+            s.sendmail('noreply@turbo.crc.nd.edu', list_of_recipients, msg.as_string())
+            s.close()  # Use close() instead of quit()
+            time.sleep(5)  # Add 5 second delay between emails
+        except Exception as e:
+            print("Error sending email to %s: %s" % (to_email, str(e)))
 
     def send_supervisor_report(self, supervisor_name, start_date, end_date, report_data, options):
         # Convert dates to strings
