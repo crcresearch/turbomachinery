@@ -284,7 +284,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         # Get dates from options or use defaults
         start_date, end_date = self.get_report_dates(options.get('monthly', False), options)
-        print(f"\nDate Range: {start_date} to {end_date}")  # Debug print
+        print "\nDate Range: %s to %s" % (start_date, end_date)  # Debug print
 
         monthly = options.get('monthly', False)
         test_email = options.get('test_email')
