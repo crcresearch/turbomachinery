@@ -62,7 +62,7 @@ class Command(BaseCommand):
         # Only bypass day check if explicitly testing
         if options and (options.get('print') or options.get('test_email')):
             if monthly:
-                start_date = today.replace(day=1)
+                start_date = today.replace(day=1)  # First day of month
                 end_date = today
             else:
                 # Get previous week (Saturday through Friday)
@@ -283,14 +283,8 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         # Get dates from options or use defaults
-        if options.get('start_date') and options.get('end_date'):
-            start_date = datetime.strptime(options['start_date'], '%Y-%m-%d').date()
-            end_date = datetime.strptime(options['end_date'], '%Y-%m-%d').date()
-        else:
-            # Default to previous week if no dates provided
-            today = datetime.now().date()
-            end_date = today - timedelta(days=(today.weekday() + 3) % 7)  # Previous Friday
-            start_date = end_date - timedelta(days=6)  # Previous Saturday
+        start_date, end_date = self.get_report_dates(options.get('monthly', False), options)
+        print(f"\nDate Range: {start_date} to {end_date}")  # Debug print
 
         monthly = options.get('monthly', False)
         test_email = options.get('test_email')
