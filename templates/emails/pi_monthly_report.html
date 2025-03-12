@@ -8,50 +8,63 @@
             line-height: 1.4;
             color: #333;
             padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
         }
         h2 {
             color: #333;
             margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #cce0ff;
+        }
+        .report-container {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .header-row {
+            border-bottom: 2px solid #cce0ff;
+            text-align: right;
+            padding: 10px 0;
+        }
+        .grand-total {
+            font-weight: bold;
+            margin-left: 20px;
         }
         .project {
-            margin-bottom: 15px;
-            border-top: 1px solid #cce0ff;  /* Light blue border */
+            border-top: 1px solid #cce0ff;
+            padding: 8px 0;
         }
         .project-header {
             font-weight: bold;
-            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
         }
         .project-code {
-            display: inline-block;
-            width: 100px;
+            flex: 0 0 300px;
+        }
+        .row {
+            display: flex;
+            padding: 4px 0;
+            align-items: center;
+        }
+        .name-column {
+            flex: 0 0 300px;
         }
         .person {
-            margin-left: 20px;
-            margin-bottom: 5px;
+            padding-left: 20px;
         }
         .activity {
-            margin-left: 40px;
-            color: #333;
+            padding-left: 40px;
+            color: #666;
         }
-        .hours {
-            display: inline-block;
-            width: 60px;
+        .hours-column {
+            flex: 0 0 80px;
             text-align: right;
-            margin-right: 5px;
+            padding-right: 20px;
         }
-        .header {
-            font-weight: bold;
-            margin-bottom: 10px;
-            border-bottom: 1px solid #cce0ff;  /* Light blue border */
-        }
-        .column-labels {
-            text-align: right;
-            margin-bottom: 5px;
-        }
-        .column-labels span {
-            display: inline-block;
-            width: 60px;
-            margin-right: 5px;
+        .billable {
+            font-style: italic;
+            color: #666;
         }
     </style>
 </head>
@@ -59,31 +72,29 @@
     <h2>Time Report: {{ start_date|date:"M d, Y" }} - {{ end_date|date:"M d, Y" }}</h2>
 
     {% if entries %}
-        <div class="header">
-            <div class="column-labels" style="float: right;">
-                <span>49</span>
-                <span>Grand Total</span>
-            </div>
-            <div style="clear: both;"></div>
+        <div class="header-row">
+            <span class="hours-column">{{ entries.grand_total|floatformat:2 }}</span>
+            <span class="grand-total">Grand Total</span>
         </div>
+
         {% for project_code, project_data in entries.items %}
             <div class="project">
-                <div class="project-header">
-                    <span class="project-code">{{ project_code }}</span>
-                    <span class="hours">{{ project_data.total_hours|floatformat:2 }}</span>
-                    <span class="hours">{{ project_data.total_hours|floatformat:2 }}</span>
+                <div class="row project-header">
+                    <div class="name-column project-code">{{ project_code }}</div>
+                    <div class="hours-column">{{ project_data.total_hours|floatformat:2 }}</div>
+                    <div class="hours-column">{{ project_data.total_hours|floatformat:2 }}</div>
                 </div>
                 {% for person, person_data in project_data.users.items %}
-                    <div class="person">
-                        {{ person }}
-                        <span class="hours">{{ person_data.hours|floatformat:2 }}</span>
-                        <span class="hours">{{ person_data.hours|floatformat:2 }}</span>
+                    <div class="row">
+                        <div class="name-column person">{{ person }}</div>
+                        <div class="hours-column">{{ person_data.hours|floatformat:2 }}</div>
+                        <div class="hours-column">{{ person_data.hours|floatformat:2 }}</div>
                     </div>
                     {% for activity, activity_data in person_data.activities.items %}
-                        <div class="activity">
-                            {{ activity }}
-                            <span class="hours">{{ activity_data.hours|floatformat:2 }}</span>
-                            <span class="hours">{{ activity_data.hours|floatformat:2 }}</span>
+                        <div class="row">
+                            <div class="name-column activity">{{ activity }}</div>
+                            <div class="hours-column">{{ activity_data.hours|floatformat:2 }}</div>
+                            <div class="hours-column">{{ activity_data.hours|floatformat:2 }}</div>
                         </div>
                     {% endfor %}
                 {% endfor %}
