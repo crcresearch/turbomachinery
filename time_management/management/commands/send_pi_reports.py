@@ -299,14 +299,16 @@ class Command(BaseCommand):
             username = '%s %s' % (entry.user.firstname, entry.user.lastname)
             username = username.strip()
             hours = float(entry.hours)
-            activity = entry.activity.name if entry.activity else 'No Activity'
+            
+            # Use comments as activities if they exist
+            activity = entry.comments if entry.comments else (entry.activity.name if entry.activity else 'No Activity')
             
             # Initialize project if not exists
             if project_code not in report_data:
                 report_data[project_code] = {
                     'total_hours': 0,
-                                'users': {}
-                            }
+                    'users': {}
+                }
             
             # Add to project total
             report_data[project_code]['total_hours'] += hours
@@ -321,11 +323,12 @@ class Command(BaseCommand):
             # Add to user total
             report_data[project_code]['users'][username]['hours'] += hours
             
-            # Add to activity data
+            # Add to activity data (using comments)
             if activity not in report_data[project_code]['users'][username]['activities']:
                 report_data[project_code]['users'][username]['activities'][activity] = {
-                    'hours': 0
+                    'hours': hours
                 }
-            report_data[project_code]['users'][username]['activities'][activity]['hours'] += hours
+            else:
+                report_data[project_code]['users'][username]['activities'][activity]['hours'] += hours
 
         return dict(sorted(report_data.items())) 

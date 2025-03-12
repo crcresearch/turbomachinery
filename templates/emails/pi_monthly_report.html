@@ -9,35 +9,34 @@
             color: #333;
             padding: 20px;
         }
-        h2, h4 {
+        h2 {
             color: #333;
             margin-bottom: 20px;
         }
-        table {
-            border-collapse: collapse;
-            width: 100%;
-            margin-bottom: 20px;
-        }
-        th, td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
-        }
-        th {
-            background-color: #f2f2f2;
-        }
-        tr:nth-child(even) {
-            background-color: #f9f9f9;  /* Light gray for even rows */
-        }
-        tr:hover {
-            background-color: #f5f5f5;  /* Slightly darker on hover */
-        }
-        .project-section {
+        .project {
             margin-bottom: 30px;
         }
         .project-header {
-            margin: 5px 0;
-            font-weight: normal;
+            font-weight: bold;
+            padding: 10px 0;
+            border-bottom: 1px solid #ddd;
+        }
+        .person {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        .hours {
+            display: inline-block;
+            min-width: 60px;
+            text-align: right;
+            margin-left: 10px;
+        }
+        .activity {
+            color: #666;
+            margin-left: 40px;
+        }
+        .comment {
+            font-style: italic;
         }
     </style>
 </head>
@@ -46,28 +45,24 @@
 
     {% if entries %}
         {% for project_code, project_data in entries.items %}
-            <div class="project-section">
-                <div class="project-header">Project: {{ project_code }} - Hours: {{ project_data.total_hours|floatformat:2 }}</div>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Activity</th>
-                            <th>Hours</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for person, person_data in project_data.users.items %}
-                            <tr>
-                                <td>{{ person }}</td>
-                                <td>{{ person_data.hours|floatformat:2 }}</td>
-                            </tr>
-                            <tr>
-                                <td style="padding-left: 20px;">Billable</td>
-                                <td>{{ person_data.hours|floatformat:2 }}</td>
-                            </tr>
+            <div class="project">
+                <div class="project-header">
+                    {{ project_code }} - Hours: {{ project_data.total_hours|floatformat:2 }}
+                </div>
+                {% for person, person_data in project_data.users.items %}
+                    <div class="person">
+                        {{ person }} {{ person_data.hours|floatformat:2 }}
+                        {% for activity, activity_data in person_data.activities.items %}
+                            <div class="activity">
+                                {% if '"' in activity %}
+                                    {{ activity }}
+                                {% else %}
+                                    "{{ activity }}" {{ activity_data.hours|floatformat:2 }}
+                                {% endif %}
+                            </div>
                         {% endfor %}
-                    </tbody>
-                </table>
+                    </div>
+                {% endfor %}
             </div>
         {% endfor %}
     {% else %}
