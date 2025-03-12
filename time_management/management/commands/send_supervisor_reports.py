@@ -396,8 +396,8 @@ class Command(BaseCommand):
                         context
                     )
 
-                    subject = 'NDTL {} Time Report ({} - {})'.format(
-                        'Monthly' if monthly else 'Weekly',
+                    subject = 'NDTL Supervisor %s Report (%s - %s)' % (
+                        'Monthly' if options.get('monthly') else 'Weekly',
                         start_date.strftime('%b %d'),
                         end_date.strftime('%b %d')
                     )
@@ -407,6 +407,7 @@ class Command(BaseCommand):
                         html_content,
                         subject
                     )
+                    self.stdout.write(self.style.SUCCESS('Sent report to %s' % supervisor_email))
 
         except Exception as e:
             self.stdout.write(self.style.ERROR('Error: {}'.format(str(e))))

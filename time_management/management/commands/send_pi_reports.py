@@ -191,7 +191,7 @@ class Command(BaseCommand):
                 password="Let's go turbo!"
             )
             cursor = connection.cursor()
-
+            
             # Get all projects and their Financial PI emails
             cursor.execute("""
                 SELECT DISTINCT cv.value as pi_email, 
@@ -266,7 +266,7 @@ class Command(BaseCommand):
 
                 if entries.exists():
                     html_content = render_to_string('emails/pi_monthly_report.html', context)
-                    subject = 'NDTL {} Time Report ({} - {})'.format(
+                    subject = 'NDTL PI %s Report (%s - %s)' % (
                         'Monthly' if options.get('monthly') else 'Weekly',
                         start_date.strftime('%b %d'),
                         end_date.strftime('%b %d')
@@ -274,7 +274,7 @@ class Command(BaseCommand):
 
                     self.send_notification(pi_email, html_content, subject)
                     self.stdout.write(self.style.SUCCESS('Sent report to %s' % pi_email))
-
+            
         except Exception as e:
             self.stdout.write(self.style.ERROR('Error: %s' % str(e)))
             raise
@@ -295,8 +295,8 @@ class Command(BaseCommand):
             if project_code not in report_data:
                 report_data[project_code] = {
                     'total_hours': 0,
-                    'users': {}
-                }
+                                'users': {}
+                            }
             
             # Add to project total
             report_data[project_code]['total_hours'] += hours
