@@ -65,35 +65,72 @@
 <body>
     <h2>Time Report: {{ start_date|date:"M d, Y" }} - {{ end_date|date:"M d, Y" }}</h2>
 
-    {% if entries %}
-        {% for project_code, project_data in entries.items %}
-            <div class="project">
-                <div class="project-header">
-                    {{ project_code }} - Total Hours: {{ project_data.total_hours|floatformat:2 }}
-                </div>
-                {% for person, person_data in project_data.users.items %}
-                    <div class="person-name">{{ person }} {{ person_data.hours|floatformat:2 }}</div>
-                    <table class="report-table" cellspacing="0" cellpadding="0" border="1">
-                        <thead>
-                            <tr>
-                                <th width="70%">Activity</th>
-                                <th width="30%">Hours</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for activity, activity_data in person_data.activities.items %}
-                                <tr>
-                                    <td>{{ activity }}</td>
-                                    <td>{{ activity_data.hours|floatformat:2 }}</td>
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+    {% if monthly %}
+        {% if weekly_data %}
+            {% for week_label, week_entries in weekly_data.items %}
+                <h3>{{ week_label }}</h3>
+                {% for project_code, project_data in week_entries.items %}
+                    <div class="project">
+                        <div class="project-header">
+                            {{ project_code }} - Total Hours: {{ project_data.total_hours|floatformat:2 }}
+                        </div>
+                        {% for person, person_data in project_data.users.items %}
+                            <div class="person-name">{{ person }} {{ person_data.hours|floatformat:2 }}</div>
+                            <table class="report-table" cellspacing="0" cellpadding="0" border="1">
+                                <thead>
+                                    <tr>
+                                        <th width="70%">Activity</th>
+                                        <th width="30%">Hours</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for activity, activity_data in person_data.activities.items %}
+                                        <tr>
+                                            <td>{{ activity }}</td>
+                                            <td>{{ activity_data.hours|floatformat:2 }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        {% endfor %}
+                    </div>
                 {% endfor %}
-            </div>
-        {% endfor %}
+                <hr>
+            {% endfor %}
+        {% else %}
+            <p>No time entries found for this period.</p>
+        {% endif %}
     {% else %}
-        <p>No time entries found for this period.</p>
+        {% if entries %}
+            {% for project_code, project_data in entries.items %}
+                <div class="project">
+                    <div class="project-header">
+                        {{ project_code }} - Total Hours: {{ project_data.total_hours|floatformat:2 }}
+                    </div>
+                    {% for person, person_data in project_data.users.items %}
+                        <div class="person-name">{{ person }} {{ person_data.hours|floatformat:2 }}</div>
+                        <table class="report-table" cellspacing="0" cellpadding="0" border="1">
+                            <thead>
+                                <tr>
+                                    <th width="70%">Activity</th>
+                                    <th width="30%">Hours</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for activity, activity_data in person_data.activities.items %}
+                                    <tr>
+                                        <td>{{ activity }}</td>
+                                        <td>{{ activity_data.hours|floatformat:2 }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    {% endfor %}
+                </div>
+            {% endfor %}
+        {% else %}
+            <p>No time entries found for this period.</p>
+        {% endif %}
     {% endif %}
 </body>
 </html> 
