@@ -13,31 +13,27 @@
             color: #333;
             margin-bottom: 20px;
         }
-        h4 {
-            margin: 25px 0 10px 0;
-        }
-        table {
-            border-collapse: collapse;
-            width: 100%;
-            margin-bottom: 20px;
-        }
-        th, td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
-        }
-        th {
-            background-color: #f2f2f2;
-        }
-        .total {
-            font-weight: bold;
-        }
-        .project-section {
+        .project {
             margin-bottom: 30px;
         }
         .project-header {
-            margin: 5px 0;
-            font-weight: normal;
+            font-weight: bold;
+            padding: 10px 0;
+            border-bottom: 1px solid #ddd;
+        }
+        .person {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        .hours {
+            display: inline-block;
+            min-width: 60px;
+            text-align: right;
+            margin-left: 10px;
+        }
+        .billable {
+            color: #666;
+            margin-left: 40px;
         }
     </style>
 </head>
@@ -45,31 +41,20 @@
     <h2>Time Report: {{ start_date|date:"M d, Y" }} - {{ end_date|date:"M d, Y" }}</h2>
 
     {% if entries %}
-        {% for person, data in entries.items %}
-            <h4>{{ person }} - Total Hours: {{ data.total_hours|floatformat:2 }}</h4>
-            
-            {% for project_code, project_data in data.projects.items %}
-                <div class="project-section">
-                    <div class="project-header">Project: {{ project_code }} - Hours: {{ project_data.total_hours|floatformat:2 }}</div>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Activity</th>
-                                <th>Hours</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for activity, hours in project_data.activities.items %}
-                                <tr>
-                                    <td>{{ activity }}</td>
-                                    <td>{{ hours|floatformat:2 }}</td>
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+        {% for project_code, project_data in entries.items %}
+            <div class="project">
+                <div class="project-header">
+                    {{ project_code }} - Total Hours: {{ project_data.total_hours|floatformat:2 }}
                 </div>
-            {% endfor %}
-            <hr>
+                {% for person, person_data in project_data.users.items %}
+                    <div class="person">
+                        {{ person }} - {{ person_data.hours|floatformat:2 }}
+                        <div class="billable">
+                            Billable - {{ person_data.hours|floatformat:2 }}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
         {% endfor %}
     {% else %}
         <p>No time entries found for this period.</p>
