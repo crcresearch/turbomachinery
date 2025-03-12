@@ -169,39 +169,39 @@ class Command(BaseCommand):
         for entry in entries:
             username = '%s %s' % (entry.user.firstname, entry.user.lastname)
             username = username.strip()
+            project_code = entry.project.identifier if entry.project else 'No Project'
+            hours = float(entry.hours)
             
+            # Use comments as activities if they exist
+            activity = entry.comments if entry.comments else (entry.activity.name if entry.activity else 'No Activity')
+            
+            # Initialize user if not exists
             if username not in report_data:
                 report_data[username] = {
                     'total_hours': 0,
                     'projects': {}
                 }
             
-            project_code = entry.project.identifier if entry.project else 'No Project'
-            activity = entry.activity.name if entry.activity else 'No Activity'
-            hours = float(entry.hours)
-            
             # Add to user total
             report_data[username]['total_hours'] += hours
             
-            # Add to project data
+            # Initialize project if not exists
             if project_code not in report_data[username]['projects']:
                 report_data[username]['projects'][project_code] = {
                     'total_hours': 0,
                     'activities': {}
                 }
             
-            project_data = report_data[username]['projects'][project_code]
-            project_data['total_hours'] += hours
+            # Add to project total
+            report_data[username]['projects'][project_code]['total_hours'] += hours
             
             # Add to activity data
-            if activity not in project_data['activities']:
-                project_data['activities'][activity] = 0
-            project_data['activities'][activity] += hours
+            if activity not in report_data[username]['projects'][project_code]['activities']:
+                report_data[username]['projects'][project_code]['activities'][activity] = hours
+            else:
+                report_data[username]['projects'][project_code]['activities'][activity] += hours
 
-        return dict(sorted(
-            report_data.items(),
-            key=lambda x: (-x[1]['total_hours'], x[0].lower())
-        ))
+        return dict(sorted(report_data.items()))
 
     def get_report_data(self, start_date, end_date, monthly=False):
         if not monthly:
