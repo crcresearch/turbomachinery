@@ -8,63 +8,36 @@
             line-height: 1.4;
             color: #333;
             padding: 20px;
-            max-width: 1200px;
-            margin: 0 auto;
         }
         h2 {
             color: #333;
             margin-bottom: 20px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #cce0ff;
         }
-        .report-container {
-            width: 100%;
+        h4 {
+            margin: 25px 0 10px 0;
+        }
+        table {
             border-collapse: collapse;
+            width: 100%;
+            margin-bottom: 20px;
         }
-        .header-row {
-            border-bottom: 2px solid #cce0ff;
-            text-align: right;
-            padding: 10px 0;
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
         }
-        .grand-total {
+        th {
+            background-color: #f2f2f2;
+        }
+        .total {
             font-weight: bold;
-            margin-left: 20px;
         }
-        .project {
-            border-top: 1px solid #cce0ff;
-            padding: 8px 0;
+        .project-section {
+            margin-bottom: 30px;
         }
         .project-header {
-            font-weight: bold;
-            display: flex;
-            align-items: center;
-        }
-        .project-code {
-            flex: 0 0 300px;
-        }
-        .row {
-            display: flex;
-            padding: 4px 0;
-            align-items: center;
-        }
-        .name-column {
-            flex: 0 0 300px;
-        }
-        .person {
-            padding-left: 20px;
-        }
-        .activity {
-            padding-left: 40px;
-            color: #666;
-        }
-        .hours-column {
-            flex: 0 0 80px;
-            text-align: right;
-            padding-right: 20px;
-        }
-        .billable {
-            font-style: italic;
-            color: #666;
+            margin: 5px 0;
+            font-weight: normal;
         }
     </style>
 </head>
@@ -72,33 +45,31 @@
     <h2>Time Report: {{ start_date|date:"M d, Y" }} - {{ end_date|date:"M d, Y" }}</h2>
 
     {% if entries %}
-        <div class="header-row">
-            <span class="hours-column">{{ entries.grand_total|floatformat:2 }}</span>
-            <span class="grand-total">Grand Total</span>
-        </div>
-
-        {% for project_code, project_data in entries.items %}
-            <div class="project">
-                <div class="row project-header">
-                    <div class="name-column project-code">{{ project_code }}</div>
-                    <div class="hours-column">{{ project_data.total_hours|floatformat:2 }}</div>
-                    <div class="hours-column">{{ project_data.total_hours|floatformat:2 }}</div>
+        {% for person, data in entries.items %}
+            <h4>{{ person }} - Total Hours: {{ data.total_hours|floatformat:2 }}</h4>
+            
+            {% for project_code, project_data in data.projects.items %}
+                <div class="project-section">
+                    <div class="project-header">Project: {{ project_code }} - Hours: {{ project_data.total_hours|floatformat:2 }}</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Activity</th>
+                                <th>Hours</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for activity, hours in project_data.activities.items %}
+                                <tr>
+                                    <td>{{ activity }}</td>
+                                    <td>{{ hours|floatformat:2 }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
-                {% for person, person_data in project_data.users.items %}
-                    <div class="row">
-                        <div class="name-column person">{{ person }}</div>
-                        <div class="hours-column">{{ person_data.hours|floatformat:2 }}</div>
-                        <div class="hours-column">{{ person_data.hours|floatformat:2 }}</div>
-                    </div>
-                    {% for activity, activity_data in person_data.activities.items %}
-                        <div class="row">
-                            <div class="name-column activity">{{ activity }}</div>
-                            <div class="hours-column">{{ activity_data.hours|floatformat:2 }}</div>
-                            <div class="hours-column">{{ activity_data.hours|floatformat:2 }}</div>
-                        </div>
-                    {% endfor %}
-                {% endfor %}
-            </div>
+            {% endfor %}
+            <hr>
         {% endfor %}
     {% else %}
         <p>No time entries found for this period.</p>
