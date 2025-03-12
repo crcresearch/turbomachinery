@@ -100,7 +100,7 @@ class Command(BaseCommand):
         smtp.sendmail('noreply@turbo.crc.nd.edu', [to_email], msg.as_string())
         smtp.close()
         
-        time.sleep(5)  # Wait 5 seconds between emails
+        time.sleep(60)  # Wait 5 seconds between emails
 
     def send_supervisor_report(self, supervisor_email, start_date, end_date, options, team_members):
         print("\nProcessing supervisor:", supervisor_email)

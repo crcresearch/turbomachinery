@@ -171,7 +171,7 @@ class Command(BaseCommand):
             smtp = smtplib.SMTP('dockerhost')
             smtp.sendmail('noreply@turbo.crc.nd.edu', to_email, msg.as_string())
             smtp.close()
-            time.sleep(15)  # Wait 15 seconds between emails to stay under rate limit
+            time.sleep(60)  # Wait 15 seconds between emails to stay under rate limit
             return True
         except Exception as e:
             print("Error sending email to %s: %s" % (to_email, str(e)))
