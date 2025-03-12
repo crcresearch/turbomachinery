@@ -171,10 +171,20 @@ class Command(BaseCommand):
             smtp = smtplib.SMTP('dockerhost')
             smtp.sendmail('noreply@turbo.crc.nd.edu', to_email, msg.as_string())
             smtp.close()
-            time.sleep(60)  # Wait 15 seconds between emails to stay under rate limit
+            time.sleep(120)  # Wait 2 minutes between emails
             return True
+            
+        except smtplib.SMTPConnectError as e:
+            if "Connection rate limit exceeded" in str(e):
+                self.stdout.write(self.style.WARNING(
+                    "Rate limit hit for %s, will retry in next run" % to_email
+                ))
+            else:
+                self.stdout.write(self.style.ERROR("SMTP Error: %s" % str(e)))
+            return False
+            
         except Exception as e:
-            print("Error sending email to %s: %s" % (to_email, str(e)))
+            self.stdout.write(self.style.ERROR("Error sending email to %s: %s" % (to_email, str(e))))
             return False
 
     def handle(self, *args, **options):
