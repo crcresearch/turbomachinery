@@ -296,66 +296,59 @@ class Command(BaseCommand):
         test_email = options.get('test_email')
 
         try:
-            # For testing, just use the test email
-            if test_email:
-                supervisors = [test_email]
-                team_members = RedmineUser.objects.filter(status=1)  # Active users
-            else:
-                # Get supervisors using direct PostgreSQL query
-                connection = psycopg2.connect(
-                    host='database1',
-                    database='redmine',
-                    user='postgres',
-                    password="Let's go turbo!"
-                )
-                cursor = connection.cursor()
-                
-                cursor.execute("""
-                    SELECT DISTINCT cv.value 
-                    FROM custom_values cv 
-                    JOIN custom_fields cf ON cf.id = cv.custom_field_id 
-                    WHERE cf.name = 'Supervisor Notification Emails'
-                    AND cv.value IS NOT NULL 
-                    AND cv.value != ''
-                    ORDER BY cv.value;
-                """)
-                supervisors = [row[0] for row in cursor.fetchall()]
-                
-                # Get team members for all supervisors
-                cursor.execute("""
-                    SELECT u.id 
-                    FROM users u
-                    JOIN custom_values cv ON cv.customized_id = u.id
-                    JOIN custom_fields cf ON cf.id = cv.custom_field_id
-                    WHERE cf.name = 'Supervisor Notification Emails'
-                    AND cv.value IS NOT NULL;
-                """)
-                team_members = [row[0] for row in cursor.fetchall()]
-                team_members = RedmineUser.objects.filter(id__in=team_members, status=1)
+            # For testing, still get all supervisors but send separate emails
+            connection = psycopg2.connect(
+                host='database1',
+                database='redmine',
+                user='postgres',
+                password="Let's go turbo!"
+            )
+            cursor = connection.cursor()
+            
+            cursor.execute("""
+                SELECT DISTINCT cv.value 
+                FROM custom_values cv 
+                JOIN custom_fields cf ON cf.id = cv.custom_field_id 
+                WHERE cf.name = 'Supervisor Notification Emails'
+                AND cv.value IS NOT NULL 
+                AND cv.value != ''
+                ORDER BY cv.value;
+            """)
+            supervisors = [row[0] for row in cursor.fetchall()]
 
             self.stdout.write('\nFound {} supervisors\n'.format(len(supervisors)))
 
             for supervisor_email in supervisors:
                 self.stdout.write('\nProcessing supervisor: {}'.format(supervisor_email))
 
+                # Get team members for this supervisor only
+                cursor.execute("""
+                    SELECT u.id 
+                    FROM users u
+                    JOIN custom_values cv ON cv.customized_id = u.id
+                    JOIN custom_fields cf ON cf.id = cv.custom_field_id
+                    WHERE cf.name = 'Supervisor Notification Emails'
+                    AND cv.value = %s
+                    AND u.status = 1;
+                """, [supervisor_email])
+                team_members = [row[0] for row in cursor.fetchall()]
+                team_members = RedmineUser.objects.filter(id__in=team_members)
+
                 if team_members:
                     if monthly:
-                        # For monthly reports, break into weeks
+                        # Process monthly report for this supervisor
                         weekly_data = {}
                         current_date = start_date
                         
-                        # Calculate all week start dates for the month
                         week_starts = []
                         while current_date <= end_date:
                             week_starts.append(current_date)
                             current_date += timedelta(days=7)
                         
-                        # Process each week
                         for week_start in week_starts:
                             week_end = min(week_start + timedelta(days=6), end_date)
                             week_label = "Week of {}".format(week_start.strftime("%b %d"))
                             
-                            # Get entries for this week
                             entries = TimeEntry.objects.filter(
                                 user__in=team_members,
                                 spent_on__range=[week_start, week_end]
@@ -363,13 +356,6 @@ class Command(BaseCommand):
                             
                             if entries.exists():
                                 weekly_data[week_label] = self.process_entries(entries)
-                                self.stdout.write(
-                                    '\nProcessing week {} to {}: {} entries'.format(
-                                        week_start.strftime('%Y-%m-%d'),
-                                        week_end.strftime('%Y-%m-%d'),
-                                        entries.count()
-                                    )
-                                )
 
                         context = {
                             'weekly_data': weekly_data,
@@ -378,7 +364,7 @@ class Command(BaseCommand):
                             'monthly': True
                         }
                     else:
-                        # Weekly report (existing code)
+                        # Weekly report for this supervisor
                         entries = TimeEntry.objects.filter(
                             user__in=team_members,
                             spent_on__range=[start_date, end_date]
@@ -391,23 +377,21 @@ class Command(BaseCommand):
                             'monthly': False
                         }
 
-                    html_content = render_to_string(
-                        'emails/supervisor_monthly_report.html', 
-                        context
-                    )
+                    if entries.exists():
+                        html_content = render_to_string('emails/supervisor_monthly_report.html', context)
+                        subject = 'NDTL Supervisor %s Report (%s - %s)' % (
+                            'Monthly' if monthly else 'Weekly',
+                            start_date.strftime('%b %d'),
+                            end_date.strftime('%b %d')
+                        )
 
-                    subject = 'NDTL Supervisor %s Report (%s - %s)' % (
-                        'Monthly' if options.get('monthly') else 'Weekly',
-                        start_date.strftime('%b %d'),
-                        end_date.strftime('%b %d')
-                    )
+                        # Send to test email but keep supervisor name in subject
+                        to_email = test_email if test_email else supervisor_email
+                        if test_email:
+                            subject = '[%s] %s' % (supervisor_email, subject)
 
-                    self.send_notification(
-                        supervisor_email,
-                        html_content,
-                        subject
-                    )
-                    self.stdout.write(self.style.SUCCESS('Sent report to %s' % supervisor_email))
+                        self.send_notification(to_email, html_content, subject)
+                        self.stdout.write(self.style.SUCCESS('Sent report to %s' % to_email))
 
         except Exception as e:
             self.stdout.write(self.style.ERROR('Error: {}'.format(str(e))))
