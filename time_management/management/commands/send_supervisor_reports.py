@@ -340,22 +340,27 @@ class Command(BaseCommand):
                         weekly_data = {}
                         current_date = start_date
                         
-                        week_starts = []
+                        # Calculate all week start dates
                         while current_date <= end_date:
-                            week_starts.append(current_date)
-                            current_date += timedelta(days=7)
-                        
-                        for week_start in week_starts:
-                            week_end = min(week_start + timedelta(days=6), end_date)
-                            week_label = "Week of {}".format(week_start.strftime("%b %d"))
+                            week_end = min(current_date + timedelta(days=6), end_date)
+                            week_label = "Week of {}".format(current_date.strftime("%b %d"))
                             
                             entries = TimeEntry.objects.filter(
                                 user__in=team_members,
-                                spent_on__range=[week_start, week_end]
+                                spent_on__range=[current_date, week_end]
                             ).select_related('user', 'project', 'activity')
                             
                             if entries.exists():
                                 weekly_data[week_label] = self.process_entries(entries)
+                                self.stdout.write(
+                                    '\nProcessing week {} to {}: {} entries'.format(
+                                        current_date.strftime('%Y-%m-%d'),
+                                        week_end.strftime('%Y-%m-%d'),
+                                        entries.count()
+                                    )
+                                )
+                            
+                            current_date += timedelta(days=7)
 
                         context = {
                             'weekly_data': weekly_data,
