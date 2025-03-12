@@ -2,37 +2,59 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <style>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <style type="text/css">
+        /* Reset styles for email clients */
         body {
             font-family: Arial, sans-serif;
             line-height: 1.4;
-            color: #333;
+            margin: 0;
             padding: 20px;
         }
-        h2 {
-            color: #333;
+        
+        /* Table styles with explicit properties */
+        .report-table {
+            border-collapse: collapse;
+            border-spacing: 0;
+            width: 100%;
+            max-width: 800px;
             margin-bottom: 20px;
+            border: 1px solid #dddddd;
         }
+        
+        .report-table th,
+        .report-table td {
+            border: 1px solid #dddddd;
+            padding: 8px;
+            text-align: left;
+            vertical-align: top;
+        }
+        
+        .report-table th {
+            background-color: #f8f8f8;
+            font-weight: bold;
+        }
+        
+        /* Inline table styles for email client compatibility */
+        table[class="report-table"] {
+            -webkit-border-horizontal-spacing: 0;
+            -webkit-border-vertical-spacing: 0;
+        }
+        
+        h2, h3, h4, h5 {
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+        
         .project {
             margin-bottom: 30px;
         }
+        
         .project-header {
             font-weight: bold;
             margin-bottom: 10px;
         }
-        table {
-            border-collapse: collapse;
-            width: 100%;
-            margin-bottom: 20px;
-        }
-        th, td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
-        }
-        th {
-            background-color: #f2f2f2;
-        }
+        
         .person-name {
             font-weight: bold;
             margin-top: 15px;
@@ -51,11 +73,11 @@
                 </div>
                 {% for person, person_data in project_data.users.items %}
                     <div class="person-name">{{ person }} {{ person_data.hours|floatformat:2 }}</div>
-                    <table>
+                    <table class="report-table" cellspacing="0" cellpadding="0" border="1">
                         <thead>
                             <tr>
-                                <th>Activity</th>
-                                <th>Hours</th>
+                                <th width="70%">Activity</th>
+                                <th width="30%">Hours</th>
                             </tr>
                         </thead>
                         <tbody>
