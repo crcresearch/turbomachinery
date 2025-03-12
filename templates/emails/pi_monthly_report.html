@@ -18,25 +18,25 @@
         }
         .project-header {
             font-weight: bold;
-            padding: 10px 0;
-            border-bottom: 1px solid #ddd;
+            margin-bottom: 10px;
         }
-        .person {
-            margin: 10px 0;
-            padding-left: 20px;
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-bottom: 20px;
         }
-        .hours {
-            display: inline-block;
-            min-width: 60px;
-            text-align: right;
-            margin-left: 10px;
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
         }
-        .activity {
-            color: #666;
-            margin-left: 40px;
+        th {
+            background-color: #f2f2f2;
         }
-        .comment {
-            font-style: italic;
+        .person-name {
+            font-weight: bold;
+            margin-top: 15px;
+            margin-bottom: 5px;
         }
     </style>
 </head>
@@ -47,21 +47,26 @@
         {% for project_code, project_data in entries.items %}
             <div class="project">
                 <div class="project-header">
-                    {{ project_code }} - Hours: {{ project_data.total_hours|floatformat:2 }}
+                    {{ project_code }} - Total Hours: {{ project_data.total_hours|floatformat:2 }}
                 </div>
                 {% for person, person_data in project_data.users.items %}
-                    <div class="person">
-                        {{ person }} {{ person_data.hours|floatformat:2 }}
-                        {% for activity, activity_data in person_data.activities.items %}
-                            <div class="activity">
-                                {% if '"' in activity %}
-                                    {{ activity }}
-                                {% else %}
-                                    "{{ activity }}" {{ activity_data.hours|floatformat:2 }}
-                                {% endif %}
-                            </div>
-                        {% endfor %}
-                    </div>
+                    <div class="person-name">{{ person }} {{ person_data.hours|floatformat:2 }}</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Activity</th>
+                                <th>Hours</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for activity, activity_data in person_data.activities.items %}
+                                <tr>
+                                    <td>{{ activity }}</td>
+                                    <td>{{ activity_data.hours|floatformat:2 }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 {% endfor %}
             </div>
         {% endfor %}
