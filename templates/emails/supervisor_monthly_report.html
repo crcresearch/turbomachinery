@@ -55,6 +55,15 @@
             border-top: 1px solid #f0f0f0;
             margin: 20px 0;
         }
+        
+        /* Add these new styles */
+        .project-row {
+            background-color: #f9f9f9;
+        }
+        
+        .activity-row td {
+            padding-left: 20px;  /* Indent activities under projects */
+        }
     </style>
 </head>
 <body>
@@ -68,27 +77,28 @@
                     {% for person, data in entries.items %}
                         <h4>{{ person }} - Total Hours: {{ data.total_hours|floatformat:2 }}</h4>
                         {% if data.projects %}
-                            {% for project_code, project_data in data.projects.items %}
-                                <h5>{{ project_code }} - Hours: {{ project_data.total_hours|floatformat:2 }}</h5>
-                                {% if project_data.activities %}
-                                    <table class="report-table" cellspacing="0" cellpadding="0" border="1">
-                                        <thead>
-                                            <tr>
-                                                <th width="70%">Activity</th>
-                                                <th width="30%">Hours</th>
+                            <table class="report-table" cellspacing="0" cellpadding="0" border="1">
+                                <thead>
+                                    <tr>
+                                        <th width="70%">Project / Activity</th>
+                                        <th width="30%">Hours</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for project_code, project_data in data.projects.items %}
+                                        <tr class="project-row">
+                                            <td><strong>{{ project_code }}</strong></td>
+                                            <td><strong>{{ project_data.total_hours|floatformat:2 }}</strong></td>
+                                        </tr>
+                                        {% for activity, hours in project_data.activities.items %}
+                                            <tr class="activity-row">
+                                                <td>{{ activity }}</td>
+                                                <td>{{ hours|floatformat:2 }}</td>
                                             </tr>
-                                        </thead>
-                                        <tbody>
-                                            {% for activity, hours in project_data.activities.items %}
-                                                <tr>
-                                                    <td>{{ activity }}</td>
-                                                    <td>{{ hours|floatformat:2 }}</td>
-                                                </tr>
-                                            {% endfor %}
-                                        </tbody>
-                                    </table>
-                                {% endif %}
-                            {% endfor %}
+                                        {% endfor %}
+                                    {% endfor %}
+                                </tbody>
+                            </table>
                         {% endif %}
                         <hr>
                     {% endfor %}
@@ -102,27 +112,28 @@
             {% for person, data in entries.items %}
                 <h4>{{ person }} - Total Hours: {{ data.total_hours|floatformat:2 }}</h4>
                 {% if data.projects %}
-                    {% for project_code, project_data in data.projects.items %}
-                        <h5>Project: {{ project_code }} - Hours: {{ project_data.total_hours|floatformat:2 }}</h5>
-                        {% if project_data.activities %}
-                            <table class="report-table" cellspacing="0" cellpadding="0" border="1">
-                                <thead>
-                                    <tr>
-                                        <th width="70%">Activity</th>
-                                        <th width="30%">Hours</th>
+                    <table class="report-table" cellspacing="0" cellpadding="0" border="1">
+                        <thead>
+                            <tr>
+                                <th width="70%">Project / Activity</th>
+                                <th width="30%">Hours</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for project_code, project_data in data.projects.items %}
+                                <tr class="project-row">
+                                    <td><strong>{{ project_code }}</strong></td>
+                                    <td><strong>{{ project_data.total_hours|floatformat:2 }}</strong></td>
+                                </tr>
+                                {% for activity, hours in project_data.activities.items %}
+                                    <tr class="activity-row">
+                                        <td>{{ activity }}</td>
+                                        <td>{{ hours|floatformat:2 }}</td>
                                     </tr>
-                                </thead>
-                                <tbody>
-                                    {% for activity, hours in project_data.activities.items %}
-                                        <tr>
-                                            <td>{{ activity }}</td>
-                                            <td>{{ hours|floatformat:2 }}</td>
-                                        </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        {% endif %}
-                    {% endfor %}
+                                {% endfor %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 {% endif %}
                 <hr>
             {% endfor %}
