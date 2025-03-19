@@ -6,10 +6,11 @@
     <style type="text/css">
         /* Reset styles for email clients */
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Trebuchet MS', 'Lucida Grande', 'Lucida Sans Unicode', 'Lucida Sans', Tahoma, sans-serif;
             line-height: 1.4;
             margin: 0;
             padding: 20px;
+            color: #333333;
         }
         
         /* Table styles with explicit properties */
@@ -19,20 +20,21 @@
             width: 100%;
             max-width: 800px;
             margin-bottom: 20px;
-            border: 1px solid #dddddd;
+            border: 1px solid #e6e6e6;
         }
         
         .report-table th,
         .report-table td {
-            border: 1px solid #dddddd;
+            border: 1px solid #e6e6e6;
             padding: 8px;
             text-align: left;
             vertical-align: top;
         }
         
         .report-table th {
-            background-color: #f8f8f8;
-            font-weight: bold;
+            background-color: #e6f3ff;  /* Light blue background */
+            font-weight: 600;
+            color: #444444;
         }
         
         /* Inline table styles for email client compatibility */
@@ -44,6 +46,14 @@
         h2, h3, h4, h5 {
             margin-top: 20px;
             margin-bottom: 10px;
+            font-family: 'Trebuchet MS', 'Lucida Grande', 'Lucida Sans Unicode', 'Lucida Sans', Tahoma, sans-serif;
+            font-weight: 600;
+        }
+        
+        hr {
+            border: 0;
+            border-top: 1px solid #f0f0f0;
+            margin: 20px 0;
         }
         
         .project {
@@ -51,14 +61,22 @@
         }
         
         .project-header {
-            font-weight: bold;
+            font-weight: 600;
             margin-bottom: 10px;
+            padding: 8px;
+            background-color: #f9f9f9;
+            border: 1px solid #e6e6e6;
         }
         
         .person-name {
-            font-weight: bold;
+            font-weight: 600;
             margin-top: 15px;
             margin-bottom: 5px;
+            color: #444444;
+        }
+        
+        .activity-row td {
+            padding-left: 20px;
         }
     </style>
 </head>
@@ -75,7 +93,7 @@
                             {{ project_code }} - Total Hours: {{ project_data.total_hours|floatformat:2 }}
                         </div>
                         {% for person, person_data in project_data.users.items %}
-                            <div class="person-name">{{ person }} {{ person_data.hours|floatformat:2 }}</div>
+                            <div class="person-name">{{ person }} - Hours: {{ person_data.hours|floatformat:2 }}</div>
                             <table class="report-table" cellspacing="0" cellpadding="0" border="1">
                                 <thead>
                                     <tr>
@@ -85,7 +103,7 @@
                                 </thead>
                                 <tbody>
                                     {% for activity, activity_data in person_data.activities.items %}
-                                        <tr>
+                                        <tr class="activity-row">
                                             <td>{{ activity }}</td>
                                             <td>{{ activity_data.hours|floatformat:2 }}</td>
                                         </tr>
@@ -108,7 +126,7 @@
                         {{ project_code }} - Total Hours: {{ project_data.total_hours|floatformat:2 }}
                     </div>
                     {% for person, person_data in project_data.users.items %}
-                        <div class="person-name">{{ person }} {{ person_data.hours|floatformat:2 }}</div>
+                        <div class="person-name">{{ person }} - Hours: {{ person_data.hours|floatformat:2 }}</div>
                         <table class="report-table" cellspacing="0" cellpadding="0" border="1">
                             <thead>
                                 <tr>
@@ -118,7 +136,7 @@
                             </thead>
                             <tbody>
                                 {% for activity, activity_data in person_data.activities.items %}
-                                    <tr>
+                                    <tr class="activity-row">
                                         <td>{{ activity }}</td>
                                         <td>{{ activity_data.hours|floatformat:2 }}</td>
                                     </tr>
