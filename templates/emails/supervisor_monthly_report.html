@@ -28,7 +28,6 @@
         .report-table td {
             border: 1px solid #e6e6e6;
             padding: 8px;
-            text-align: left;
             vertical-align: top;
         }
         
@@ -65,6 +64,20 @@
         .activity-row td {
             padding-left: 20px;  /* Indent activities under projects */
         }
+        
+        .report-table td:not(:first-child) {
+            text-align: right;  /* Right align all cells except first column */
+        }
+        
+        .report-table th:not(:first-child) {
+            text-align: right;  /* Right align header cells except first column */
+        }
+        
+        /* Keep project and activity names left-aligned */
+        .project-row td:first-child,
+        .activity-row td:first-child {
+            text-align: left;
+        }
     </style>
 </head>
 <body>
@@ -85,14 +98,31 @@
                 <tbody>
                     {% for project, project_data in employee_data.projects.items %}
                         <tr class="project-row">
-                            <td><strong>{{ project }}</strong></td>
+                            <td>
+                                {% if project_data.parent_project %}
+                                    <span style="padding-left: 20px">↳ </span>
+                                {% endif %}
+                                <strong>{{ project }}</strong>
+                            </td>
                             {% for week_num in week_numbers %}
-                                <td></td>
+                                <td>
+                                    {% with week_hours=project_data.weeks|get_item:week_num %}
+                                        {% if week_hours %}{{ week_hours|floatformat:2 }}{% endif %}
+                                    {% endwith %}
+                                </td>
                             {% endfor %}
                         </tr>
                         {% for activity, weeks in project_data.entries.items %}
                             <tr class="activity-row">
-                                <td>{{ activity }}</td>
+                                <td>
+                                    {% if project_data.parent_project %}
+                                        <span style="padding-left: 40px">
+                                    {% else %}
+                                        <span style="padding-left: 20px">
+                                    {% endif %}
+                                        {{ activity }}
+                                    </span>
+                                </td>
                                 {% for week_num in week_numbers %}
                                     <td>
                                         {% if weeks|get_item:week_num %}

@@ -28,7 +28,6 @@
         .report-table td {
             border: 1px solid #e6e6e6;
             padding: 8px;
-            text-align: left;
             vertical-align: top;
         }
         
@@ -78,6 +77,26 @@
         
         .activity-row td {
             padding-left: 20px;
+        }
+        
+        /* Add these new alignment styles */
+        .report-table td:not(:first-child) {
+            text-align: right;  /* Right align all cells except first column */
+        }
+        
+        .report-table th:not(:first-child) {
+            text-align: right;  /* Right align header cells except first column */
+        }
+        
+        /* Keep project and activity names left-aligned */
+        .project-row td:first-child,
+        .activity-row td:first-child {
+            text-align: left;
+        }
+
+        /* For the weekly report section */
+        .report-table td:last-child {
+            text-align: right;  /* Right align the hours column */
         }
     </style>
 </head>
