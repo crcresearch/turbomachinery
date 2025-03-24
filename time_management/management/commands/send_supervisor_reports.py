@@ -315,7 +315,7 @@ class Command(BaseCommand):
                     monthly_data[employee]['projects'][project] = {
                         'entries': {},
                         'weeks': {},
-                        'parent_project': project_parents.get(project)
+                        'parent_project': project_parents.get(project)  # Add parent project info
                     }
                 
                 # Add hours to project week
@@ -329,6 +329,19 @@ class Command(BaseCommand):
                 
                 # Add hours to activity week
                 monthly_data[employee]['projects'][project]['entries'][activity][week_num] = hours
+        
+        # Sort projects so parents come before children
+        for employee in monthly_data:
+            sorted_projects = {}
+            # First add projects without parents
+            for project, data in monthly_data[employee]['projects'].items():
+                if not data['parent_project']:
+                    sorted_projects[project] = data
+            # Then add child projects
+            for project, data in monthly_data[employee]['projects'].items():
+                if data['parent_project']:
+                    sorted_projects[project] = data
+            monthly_data[employee]['projects'] = sorted_projects
         
         return monthly_data
 
