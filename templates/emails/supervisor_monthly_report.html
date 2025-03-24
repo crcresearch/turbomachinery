@@ -71,8 +71,8 @@
     <h2>Time Report: {{ start_date|date:"M d, Y" }} - {{ end_date|date:"M d, Y" }}</h2>
 
     {% if monthly %}
-        {% for employee, employee_data in weekly_data.items %}
-            <h4>{{ employee }}</h4>
+        {% for project, project_data in weekly_data.items %}
+            <h3>{{ project }}</h3>
             <table class="report-table" cellspacing="0" cellpadding="0" border="1">
                 <thead>
                     <tr>
@@ -83,33 +83,21 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for project, project_data in employee_data.projects.items %}
-                        <tr class="project-row">
-                            <td><strong>{{ project }}</strong></td>
+                    {% for activity, weeks in project_data.entries.items %}
+                        <tr class="activity-row">
+                            <td>{{ activity }}</td>
                             {% for week_num in week_numbers %}
                                 <td>
-                                    {% with week_hours=project_data.weeks|get_item:week_num %}
-                                        {% if week_hours %}{{ week_hours|floatformat:2 }}{% endif %}
-                                    {% endwith %}
+                                    {% if weeks|get_item:week_num %}
+                                        {{ weeks|get_item:week_num|floatformat:2 }}
+                                    {% endif %}
                                 </td>
                             {% endfor %}
                         </tr>
-                        {% for activity, activity_data in project_data.activities.items %}
-                            <tr class="activity-row">
-                                <td>{{ activity }}</td>
-                                {% for week_num in week_numbers %}
-                                    <td>
-                                        {% with week_hours=activity_data.weeks|get_item:week_num %}
-                                            {% if week_hours %}{{ week_hours|floatformat:2 }}{% endif %}
-                                        {% endwith %}
-                                    </td>
-                                {% endfor %}
-                            </tr>
-                        {% endfor %}
                     {% endfor %}
                 </tbody>
             </table>
-            <hr>
+            <br>
         {% endfor %}
     {% else %}
         {% if entries %}
