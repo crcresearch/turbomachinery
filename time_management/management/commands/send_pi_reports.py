@@ -160,21 +160,16 @@ class Command(BaseCommand):
         pi_report['projects'] = dict(sorted(pi_report['projects'].items()))
         return pi_report
 
-    def send_notification(self, to_emails, message_body, message_subject):
-        """Modified to handle single email or multiple comma-separated emails"""
-        # Convert string of emails to list if needed
-        if isinstance(to_emails, str):
-            to_emails = [email.strip() for email in to_emails.split(',')]
-        
+    def send_notification(self, to_email, message_body, message_subject):
         msg = MIMEMultipart()
         msg['From'] = 'noreply@turbo.crc.nd.edu'
-        msg['To'] = ', '.join(to_emails)  # Join all emails for the To field
+        msg['To'] = to_email
         msg['Subject'] = message_subject
         msg.attach(MIMEText(message_body, 'html'))
 
         try:
             smtp = smtplib.SMTP('dockerhost')
-            smtp.sendmail('noreply@turbo.crc.nd.edu', to_emails, msg.as_string())
+            smtp.sendmail('noreply@turbo.crc.nd.edu', to_email, msg.as_string())
             smtp.close()
             time.sleep(120)  # Wait 2 minutes between emails
             return True
@@ -182,14 +177,14 @@ class Command(BaseCommand):
         except smtplib.SMTPConnectError as e:
             if "Connection rate limit exceeded" in str(e):
                 self.stdout.write(self.style.WARNING(
-                    "Rate limit hit for %s, will retry in next run" % to_emails
+                    "Rate limit hit for %s, will retry in next run" % to_email
                 ))
             else:
                 self.stdout.write(self.style.ERROR("SMTP Error: %s" % str(e)))
             return False
             
         except Exception as e:
-            self.stdout.write(self.style.ERROR("Error sending email to %s: %s" % (to_emails, str(e))))
+            self.stdout.write(self.style.ERROR("Error sending email to %s: %s" % (to_email, str(e))))
             return False
 
     def process_monthly_data(self, entries_by_week):
@@ -249,24 +244,31 @@ class Command(BaseCommand):
             pi_mappings = cursor.fetchall()
             
             for pi_email, project_ids in pi_mappings:
-                # Skip if no email address
-                if not pi_email:
-                    continue
-
-                # Handle test email override
+                # Handle test email case first
                 if options.get('test_email'):
-                    to_emails = options.get('test_email')
+                    to_email = options.get('test_email')
                 else:
-                    # Clean and validate email addresses
-                    to_emails = [email.strip() for email in pi_email.split(',') 
-                                if self.is_email(email.strip())]
-                    if not to_emails:
-                        self.stdout.write(self.style.WARNING(
-                            'Skipping invalid email(s): %s' % pi_email
-                        ))
-                        continue
+                    # If there's a comma, handle multiple emails, otherwise treat as single email
+                    if ',' in pi_email:
+                        email_addresses = [email.strip() for email in pi_email.split(',')]
+                        # Take the first valid email
+                        valid_emails = [email for email in email_addresses if self.is_email(email)]
+                        if not valid_emails:
+                            self.stdout.write(self.style.WARNING(
+                                'Skipping invalid email(s): %s' % pi_email
+                            ))
+                            continue
+                        to_email = valid_emails[0]  # Use first valid email
+                    else:
+                        # Single email case
+                        if not self.is_email(pi_email.strip()):
+                            self.stdout.write(self.style.WARNING(
+                                'Skipping invalid email: %s' % pi_email
+                            ))
+                            continue
+                        to_email = pi_email.strip()
 
-                self.stdout.write('\nProcessing Financial PI(s): %s' % ', '.join(to_emails))
+                self.stdout.write('\nProcessing Financial PI: %s' % to_email)
                 self.stdout.write('Projects: %s' % ', '.join(project_ids))
 
                 if options.get('monthly'):
@@ -323,8 +325,8 @@ class Command(BaseCommand):
                         end_date.strftime('%b %d')
                     )
 
-                    self.send_notification(to_emails, html_content, subject)
-                    self.stdout.write(self.style.SUCCESS('Sent report to %s' % ', '.join(to_emails)))
+                    self.send_notification(to_email, html_content, subject)
+                    self.stdout.write(self.style.SUCCESS('Sent report to %s' % to_email))
             
         except Exception as e:
             self.stdout.write(self.style.ERROR('Error: %s' % str(e)))
