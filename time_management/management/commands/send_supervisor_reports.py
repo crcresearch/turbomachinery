@@ -282,38 +282,45 @@ class Command(BaseCommand):
         ))
 
     def process_monthly_data(self, entries_by_week):
-        """Process entries into a project/activity-centric format with weeks"""
+        """Process entries into employee-centric format with weeks"""
         monthly_data = {}
         
         # Process each week's entries
         for week_num, entries in entries_by_week.items():
             for entry in entries:
+                employee = f"{entry.user.firstname} {entry.user.lastname}".strip()
                 project = entry.project.identifier if entry.project else 'No Project'
                 activity = entry.comments if entry.comments else (entry.activity.name if entry.activity else 'No Activity')
                 hours = float(entry.hours)
                 
+                # Initialize employee if needed
+                if employee not in monthly_data:
+                    monthly_data[employee] = {
+                        'projects': {}
+                    }
+                
                 # Initialize project if needed
-                if project not in monthly_data:
-                    monthly_data[project] = {
+                if project not in monthly_data[employee]['projects']:
+                    monthly_data[employee]['projects'][project] = {
                         'weeks': {},
                         'activities': {}
                     }
                 
                 # Add hours to project week
-                if week_num not in monthly_data[project]['weeks']:
-                    monthly_data[project]['weeks'][week_num] = 0
-                monthly_data[project]['weeks'][week_num] += hours
+                if week_num not in monthly_data[employee]['projects'][project]['weeks']:
+                    monthly_data[employee]['projects'][project]['weeks'][week_num] = 0
+                monthly_data[employee]['projects'][project]['weeks'][week_num] += hours
                 
                 # Initialize activity if needed
-                if activity not in monthly_data[project]['activities']:
-                    monthly_data[project]['activities'][activity] = {
+                if activity not in monthly_data[employee]['projects'][project]['activities']:
+                    monthly_data[employee]['projects'][project]['activities'][activity] = {
                         'weeks': {}
                     }
                 
                 # Add hours to activity week
-                if week_num not in monthly_data[project]['activities'][activity]['weeks']:
-                    monthly_data[project]['activities'][activity]['weeks'][week_num] = 0
-                monthly_data[project]['activities'][activity]['weeks'][week_num] += hours
+                if week_num not in monthly_data[employee]['projects'][project]['activities'][activity]['weeks']:
+                    monthly_data[employee]['projects'][project]['activities'][activity]['weeks'][week_num] = 0
+                monthly_data[employee]['projects'][project]['activities'][activity]['weeks'][week_num] += hours
         
         return monthly_data
 
@@ -370,6 +377,7 @@ class Command(BaseCommand):
                         entries_by_week = {}
                         current_date = start_date
                         week_num = 1
+                        week_numbers = []
                         
                         while current_date <= end_date:
                             week_end = min(current_date + timedelta(days=6), end_date)
@@ -381,6 +389,7 @@ class Command(BaseCommand):
                             
                             if entries.exists():
                                 entries_by_week[str(week_num)] = entries
+                                week_numbers.append(str(week_num))
                             
                             current_date += timedelta(days=7)
                             week_num += 1
@@ -392,7 +401,8 @@ class Command(BaseCommand):
                             'weekly_data': monthly_data,
                             'start_date': start_date,
                             'end_date': end_date,
-                            'monthly': True
+                            'monthly': True,
+                            'week_numbers': week_numbers  # Add week numbers to context
                         }
                     else:
                         # Weekly report for this supervisor
