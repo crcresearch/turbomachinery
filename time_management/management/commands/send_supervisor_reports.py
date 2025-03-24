@@ -281,6 +281,26 @@ class Command(BaseCommand):
             key=lambda x: (-x[1]['total_hours'], x[0].lower())
         ))
 
+    def process_monthly_data(self, weekly_data):
+        """Process weekly data to get all unique projects and activities"""
+        all_projects = {}
+        
+        # First pass - collect all projects and their activities
+        for week_data in weekly_data.values():
+            for person_data in week_data.values():
+                for project_code, project_data in person_data['projects'].items():
+                    if project_code not in all_projects:
+                        all_projects[project_code] = {}
+                    
+                    for activity in project_data['activities'].keys():
+                        all_projects[project_code][activity] = True
+
+        # Convert activity dictionaries to sorted lists
+        for project in all_projects:
+            all_projects[project] = dict(sorted(all_projects[project].items()))
+        
+        return dict(sorted(all_projects.items()))
+
     def handle(self, *args, **options):
         # Get dates from options or use defaults
         start_date, end_date = self.get_report_dates(options.get('monthly', False), options)
@@ -356,8 +376,12 @@ class Command(BaseCommand):
                             
                             current_date += timedelta(days=7)
 
+                        # Process weekly data to get all projects and activities
+                        all_projects = self.process_monthly_data(weekly_data)
+                        
                         context = {
                             'weekly_data': weekly_data,
+                            'all_projects': all_projects,
                             'start_date': start_date,
                             'end_date': end_date,
                             'monthly': True
