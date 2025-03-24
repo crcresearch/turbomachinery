@@ -282,8 +282,19 @@ class Command(BaseCommand):
         ))
 
     def process_monthly_data(self, entries_by_week):
-        """Process entries into employee-grouped format with weeks"""
-        employee_data = {}
+        """Process entries into employee-centric format with weeks"""
+        monthly_data = {}
+        
+        # Get project hierarchy information
+        project_parents = {}
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT p.identifier, parent.identifier 
+                FROM projects p
+                LEFT JOIN projects parent ON p.parent_id = parent.id
+                WHERE p.status = 1
+            """)
+            project_parents = dict(cursor.fetchall())
         
         # Process each week's entries
         for week_num, entries in entries_by_week.items():
@@ -294,25 +305,55 @@ class Command(BaseCommand):
                 hours = float(entry.hours)
                 
                 # Initialize employee if needed
-                if employee not in employee_data:
-                    employee_data[employee] = {
+                if employee not in monthly_data:
+                    monthly_data[employee] = {
                         'projects': {}
                     }
                 
                 # Initialize project if needed
-                if project not in employee_data[employee]['projects']:
-                    employee_data[employee]['projects'][project] = {
-                        'entries': {}
+                if project not in monthly_data[employee]['projects']:
+                    monthly_data[employee]['projects'][project] = {
+                        'entries': {},
+                        'weeks': {},
+                        'parent_project': project_parents.get(project)
                     }
                 
+                # Add hours to project week
+                if week_num not in monthly_data[employee]['projects'][project]['weeks']:
+                    monthly_data[employee]['projects'][project]['weeks'][week_num] = 0
+                monthly_data[employee]['projects'][project]['weeks'][week_num] += hours
+                
                 # Initialize activity if needed
-                if activity not in employee_data[employee]['projects'][project]['entries']:
-                    employee_data[employee]['projects'][project]['entries'][activity] = {}
+                if activity not in monthly_data[employee]['projects'][project]['entries']:
+                    monthly_data[employee]['projects'][project]['entries'][activity] = {}
                 
                 # Add hours to activity week
-                employee_data[employee]['projects'][project]['entries'][activity][week_num] = hours
+                monthly_data[employee]['projects'][project]['entries'][activity][week_num] = hours
         
-        return employee_data
+        return monthly_data
+
+    def get_project_and_subprojects(self, project_ids):
+        """Get all projects and their subprojects"""
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                WITH RECURSIVE subprojects AS (
+                    -- Base case: get the initial projects
+                    SELECT id, identifier, parent_id
+                    FROM projects 
+                    WHERE identifier = ANY(%s)
+                    
+                    UNION ALL
+                    
+                    -- Recursive case: get child projects
+                    SELECT p.id, p.identifier, p.parent_id
+                    FROM projects p
+                    INNER JOIN subprojects sp ON p.parent_id = sp.id
+                    WHERE p.status = 1
+                )
+                SELECT identifier FROM subprojects;
+            """, [project_ids])
+            
+            return [row[0] for row in cursor.fetchall()]
 
     def handle(self, *args, **options):
         # Get dates from options or use defaults
@@ -363,7 +404,6 @@ class Command(BaseCommand):
 
                 if team_members:
                     if monthly:
-                        # Get entries for each week
                         entries_by_week = {}
                         current_date = start_date
                         week_num = 1
@@ -372,8 +412,18 @@ class Command(BaseCommand):
                         while current_date <= end_date:
                             week_end = min(current_date + timedelta(days=6), end_date)
                             
+                            # Get all project IDs including subprojects
+                            project_entries = TimeEntry.objects.filter(
+                                user__in=team_members,
+                                spent_on__range=[current_date, week_end]
+                            ).values_list('project__identifier', flat=True).distinct()
+                            
+                            all_project_ids = self.get_project_and_subprojects(list(project_entries))
+                            
+                            # Get entries for main projects and subprojects
                             entries = TimeEntry.objects.filter(
                                 user__in=team_members,
+                                project__identifier__in=all_project_ids,
                                 spent_on__range=[current_date, week_end]
                             ).select_related('user', 'project', 'activity')
                             
