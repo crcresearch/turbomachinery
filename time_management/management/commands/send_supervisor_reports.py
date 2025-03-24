@@ -282,52 +282,45 @@ class Command(BaseCommand):
         ))
 
     def process_monthly_data(self, entries_by_week):
-        """Process entries into employee-centric format with weeks"""
+        """Process entries into project/activity-centric format with weeks"""
         monthly_data = {}
         
         # Process each week's entries
         for week_num, entries in entries_by_week.items():
             for entry in entries:
-                employee = f"{entry.user.firstname} {entry.user.lastname}".strip()
                 project = entry.project.identifier if entry.project else 'No Project'
                 activity = entry.comments if entry.comments else (entry.activity.name if entry.activity else 'No Activity')
                 hours = float(entry.hours)
                 
-                # Initialize employee if needed
-                if employee not in monthly_data:
-                    monthly_data[employee] = {
-                        'projects': {}
-                    }
-                
                 # Initialize project if needed
-                if project not in monthly_data[employee]['projects']:
-                    monthly_data[employee]['projects'][project] = {
+                if project not in monthly_data:
+                    monthly_data[project] = {
                         'weeks': {},
                         'activities': {}
                     }
                 
                 # Add hours to project week
-                if week_num not in monthly_data[employee]['projects'][project]['weeks']:
-                    monthly_data[employee]['projects'][project]['weeks'][week_num] = 0
-                monthly_data[employee]['projects'][project]['weeks'][week_num] += hours
+                if week_num not in monthly_data[project]['weeks']:
+                    monthly_data[project]['weeks'][week_num] = 0
+                monthly_data[project]['weeks'][week_num] += hours
                 
                 # Initialize activity if needed
-                if activity not in monthly_data[employee]['projects'][project]['activities']:
-                    monthly_data[employee]['projects'][project]['activities'][activity] = {
+                if activity not in monthly_data[project]['activities']:
+                    monthly_data[project]['activities'][activity] = {
                         'weeks': {}
                     }
                 
                 # Add hours to activity week
-                if week_num not in monthly_data[employee]['projects'][project]['activities'][activity]['weeks']:
-                    monthly_data[employee]['projects'][project]['activities'][activity]['weeks'][week_num] = 0
-                monthly_data[employee]['projects'][project]['activities'][activity]['weeks'][week_num] += hours
+                if week_num not in monthly_data[project]['activities'][activity]['weeks']:
+                    monthly_data[project]['activities'][activity]['weeks'][week_num] = 0
+                monthly_data[project]['activities'][activity]['weeks'][week_num] += hours
         
         return monthly_data
 
     def handle(self, *args, **options):
         # Get dates from options or use defaults
         start_date, end_date = self.get_report_dates(options.get('monthly', False), options)
-        print "\nDate Range: %s to %s" % (start_date, end_date)  # Debug print
+        print("\nDate Range: %s to %s" % (start_date, end_date))  # Fix print statement
 
         monthly = options.get('monthly', False)
         test_email = options.get('test_email')
