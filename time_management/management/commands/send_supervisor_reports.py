@@ -281,25 +281,41 @@ class Command(BaseCommand):
             key=lambda x: (-x[1]['total_hours'], x[0].lower())
         ))
 
-    def process_monthly_data(self, weekly_data):
-        """Process weekly data to get all unique projects and activities"""
-        all_projects = {}
+    def process_monthly_data(self, entries_by_week):
+        """Process entries into a project/activity-centric format with weeks"""
+        monthly_data = {}
         
-        # First pass - collect all projects and their activities
-        for week_data in weekly_data.values():
-            for person_data in week_data.values():
-                for project_code, project_data in person_data['projects'].items():
-                    if project_code not in all_projects:
-                        all_projects[project_code] = {}
-                    
-                    for activity in project_data['activities'].keys():
-                        all_projects[project_code][activity] = True
-
-        # Convert activity dictionaries to sorted lists
-        for project in all_projects:
-            all_projects[project] = dict(sorted(all_projects[project].items()))
+        # Process each week's entries
+        for week_num, entries in entries_by_week.items():
+            for entry in entries:
+                project = entry.project.identifier if entry.project else 'No Project'
+                activity = entry.comments if entry.comments else (entry.activity.name if entry.activity else 'No Activity')
+                hours = float(entry.hours)
+                
+                # Initialize project if needed
+                if project not in monthly_data:
+                    monthly_data[project] = {
+                        'weeks': {},
+                        'activities': {}
+                    }
+                
+                # Add hours to project week
+                if week_num not in monthly_data[project]['weeks']:
+                    monthly_data[project]['weeks'][week_num] = 0
+                monthly_data[project]['weeks'][week_num] += hours
+                
+                # Initialize activity if needed
+                if activity not in monthly_data[project]['activities']:
+                    monthly_data[project]['activities'][activity] = {
+                        'weeks': {}
+                    }
+                
+                # Add hours to activity week
+                if week_num not in monthly_data[project]['activities'][activity]['weeks']:
+                    monthly_data[project]['activities'][activity]['weeks'][week_num] = 0
+                monthly_data[project]['activities'][activity]['weeks'][week_num] += hours
         
-        return dict(sorted(all_projects.items()))
+        return monthly_data
 
     def handle(self, *args, **options):
         # Get dates from options or use defaults
@@ -350,14 +366,13 @@ class Command(BaseCommand):
 
                 if team_members:
                     if monthly:
-                        # Process monthly report for this supervisor
-                        weekly_data = {}
+                        # Get entries for each week
+                        entries_by_week = {}
                         current_date = start_date
+                        week_num = 1
                         
-                        # Calculate all week start dates
                         while current_date <= end_date:
                             week_end = min(current_date + timedelta(days=6), end_date)
-                            week_label = "Week of {}".format(current_date.strftime("%b %d"))
                             
                             entries = TimeEntry.objects.filter(
                                 user__in=team_members,
@@ -365,23 +380,16 @@ class Command(BaseCommand):
                             ).select_related('user', 'project', 'activity')
                             
                             if entries.exists():
-                                weekly_data[week_label] = self.process_entries(entries)
-                                self.stdout.write(
-                                    '\nProcessing week {} to {}: {} entries'.format(
-                                        current_date.strftime('%Y-%m-%d'),
-                                        week_end.strftime('%Y-%m-%d'),
-                                        entries.count()
-                                    )
-                                )
+                                entries_by_week[str(week_num)] = entries
                             
                             current_date += timedelta(days=7)
-
-                        # Process weekly data to get all projects and activities
-                        all_projects = self.process_monthly_data(weekly_data)
+                            week_num += 1
+                        
+                        # Process data into monthly format
+                        monthly_data = self.process_monthly_data(entries_by_week)
                         
                         context = {
-                            'weekly_data': weekly_data,
-                            'all_projects': all_projects,
+                            'weekly_data': monthly_data,
                             'start_date': start_date,
                             'end_date': end_date,
                             'monthly': True

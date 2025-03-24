@@ -75,35 +75,30 @@
             <thead>
                 <tr>
                     <th>Project / Activity</th>
-                    {% for week_label, entries in weekly_data.items %}
-                        <th>{{ week_label }}</th>
+                    {% for week_num in "123456"|make_list %}
+                        <th>Week {{ week_num }}</th>
                     {% endfor %}
                 </tr>
             </thead>
             <tbody>
-                {% regroup weekly_data.items|dictsort:"1.projects.keys" by "1.projects.keys" as projects_by_week %}
-                {% for project, activities in all_projects.items %}
+                {% for project, project_data in weekly_data.items %}
                     <tr class="project-row">
                         <td><strong>{{ project }}</strong></td>
-                        {% for week_label, entries in weekly_data.items %}
+                        {% for week_num in "123456"|make_list %}
                             <td>
-                                {% with week_project=entries.projects|get_item:project %}
-                                    {% if week_project %}
-                                        <strong>{{ week_project.total_hours|floatformat:0 }}</strong>
-                                    {% endif %}
+                                {% with week_hours=project_data.weeks|get_item:week_num %}
+                                    {% if week_hours %}{{ week_hours }}{% endif %}
                                 {% endwith %}
                             </td>
                         {% endfor %}
                     </tr>
-                    {% for activity, hours in activities.items %}
+                    {% for activity, activity_data in project_data.activities.items %}
                         <tr class="activity-row">
                             <td>{{ activity }}</td>
-                            {% for week_label, entries in weekly_data.items %}
+                            {% for week_num in "123456"|make_list %}
                                 <td>
-                                    {% with week_project=entries.projects|get_item:project %}
-                                        {% if week_project and week_project.activities|get_item:activity %}
-                                            {{ week_project.activities|get_item:activity|floatformat:0 }}
-                                        {% endif %}
+                                    {% with week_hours=activity_data.weeks|get_item:week_num %}
+                                        {% if week_hours %}{{ week_hours }}{% endif %}
                                     {% endwith %}
                                 </td>
                             {% endfor %}
