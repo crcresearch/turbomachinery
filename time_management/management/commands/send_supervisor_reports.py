@@ -282,8 +282,8 @@ class Command(BaseCommand):
         ))
 
     def process_monthly_data(self, entries_by_week):
-        """Process entries into project/activity-centric format with weeks"""
-        monthly_data = {}
+        """Process entries into separate tables by project"""
+        projects_data = {}
         
         # Process each week's entries
         for week_num, entries in entries_by_week.items():
@@ -293,29 +293,19 @@ class Command(BaseCommand):
                 hours = float(entry.hours)
                 
                 # Initialize project if needed
-                if project not in monthly_data:
-                    monthly_data[project] = {
-                        'weeks': {},
-                        'activities': {}
+                if project not in projects_data:
+                    projects_data[project] = {
+                        'entries': {}
                     }
-                
-                # Add hours to project week
-                if week_num not in monthly_data[project]['weeks']:
-                    monthly_data[project]['weeks'][week_num] = 0
-                monthly_data[project]['weeks'][week_num] += hours
                 
                 # Initialize activity if needed
-                if activity not in monthly_data[project]['activities']:
-                    monthly_data[project]['activities'][activity] = {
-                        'weeks': {}
-                    }
+                if activity not in projects_data[project]['entries']:
+                    projects_data[project]['entries'][activity] = {}
                 
                 # Add hours to activity week
-                if week_num not in monthly_data[project]['activities'][activity]['weeks']:
-                    monthly_data[project]['activities'][activity]['weeks'][week_num] = 0
-                monthly_data[project]['activities'][activity]['weeks'][week_num] += hours
+                projects_data[project]['entries'][activity][week_num] = hours
         
-        return monthly_data
+        return projects_data
 
     def handle(self, *args, **options):
         # Get dates from options or use defaults
