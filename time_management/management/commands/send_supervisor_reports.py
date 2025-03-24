@@ -288,7 +288,7 @@ class Command(BaseCommand):
         # Process each week's entries
         for week_num, entries in entries_by_week.items():
             for entry in entries:
-                employee = f"{entry.user.firstname} {entry.user.lastname}".strip()
+                employee = "{0} {1}".format(entry.user.firstname, entry.user.lastname).strip()
                 project = entry.project.identifier if entry.project else 'No Project'
                 activity = entry.comments if entry.comments else (entry.activity.name if entry.activity else 'No Activity')
                 hours = float(entry.hours)
