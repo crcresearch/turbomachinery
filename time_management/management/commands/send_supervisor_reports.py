@@ -282,30 +282,37 @@ class Command(BaseCommand):
         ))
 
     def process_monthly_data(self, entries_by_week):
-        """Process entries into separate tables by project"""
-        projects_data = {}
+        """Process entries into employee-grouped format with weeks"""
+        employee_data = {}
         
         # Process each week's entries
         for week_num, entries in entries_by_week.items():
             for entry in entries:
+                employee = "{0} {1}".format(entry.user.firstname, entry.user.lastname).strip()
                 project = entry.project.identifier if entry.project else 'No Project'
                 activity = entry.comments if entry.comments else (entry.activity.name if entry.activity else 'No Activity')
                 hours = float(entry.hours)
                 
+                # Initialize employee if needed
+                if employee not in employee_data:
+                    employee_data[employee] = {
+                        'projects': {}
+                    }
+                
                 # Initialize project if needed
-                if project not in projects_data:
-                    projects_data[project] = {
+                if project not in employee_data[employee]['projects']:
+                    employee_data[employee]['projects'][project] = {
                         'entries': {}
                     }
                 
                 # Initialize activity if needed
-                if activity not in projects_data[project]['entries']:
-                    projects_data[project]['entries'][activity] = {}
+                if activity not in employee_data[employee]['projects'][project]['entries']:
+                    employee_data[employee]['projects'][project]['entries'][activity] = {}
                 
                 # Add hours to activity week
-                projects_data[project]['entries'][activity][week_num] = hours
+                employee_data[employee]['projects'][project]['entries'][activity][week_num] = hours
         
-        return projects_data
+        return employee_data
 
     def handle(self, *args, **options):
         # Get dates from options or use defaults

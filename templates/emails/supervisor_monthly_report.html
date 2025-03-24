@@ -71,33 +71,37 @@
     <h2>Time Report: {{ start_date|date:"M d, Y" }} - {{ end_date|date:"M d, Y" }}</h2>
 
     {% if monthly %}
-        {% for project, project_data in weekly_data.items %}
-            <h3>{{ project }}</h3>
-            <table class="report-table" cellspacing="0" cellpadding="0" border="1">
-                <thead>
-                    <tr>
-                        <th>Project / Activity</th>
-                        {% for week_num in week_numbers %}
-                            <th>Week {{ week_num }}</th>
-                        {% endfor %}
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for activity, weeks in project_data.entries.items %}
-                        <tr class="activity-row">
-                            <td>{{ activity }}</td>
+        {% for employee, employee_data in weekly_data.items %}
+            <h3>{{ employee }}</h3>
+            {% for project, project_data in employee_data.projects.items %}
+                <h4>{{ project }}</h4>
+                <table class="report-table" cellspacing="0" cellpadding="0" border="1">
+                    <thead>
+                        <tr>
+                            <th>Project / Activity</th>
                             {% for week_num in week_numbers %}
-                                <td>
-                                    {% if weeks|get_item:week_num %}
-                                        {{ weeks|get_item:week_num|floatformat:2 }}
-                                    {% endif %}
-                                </td>
+                                <th>Week {{ week_num }}</th>
                             {% endfor %}
                         </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-            <br>
+                    </thead>
+                    <tbody>
+                        {% for activity, weeks in project_data.entries.items %}
+                            <tr class="activity-row">
+                                <td>{{ activity }}</td>
+                                {% for week_num in week_numbers %}
+                                    <td>
+                                        {% if weeks|get_item:week_num %}
+                                            {{ weeks|get_item:week_num|floatformat:2 }}
+                                        {% endif %}
+                                    </td>
+                                {% endfor %}
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                <br>
+            {% endfor %}
+            <hr>
         {% endfor %}
     {% else %}
         {% if entries %}
