@@ -1,4 +1,5 @@
 {% load static %}
+{% load report_filters %}
 <!DOCTYPE html>
 <html>
 <head>
@@ -70,43 +71,47 @@
     <h2>Time Report: {{ start_date|date:"M d, Y" }} - {{ end_date|date:"M d, Y" }}</h2>
 
     {% if monthly %}
-        {% for week_label, entries in weekly_data.items %}
-            <div class="week-section">
-                <h3>{{ week_label }}</h3>
-                {% if entries %}
-                    {% for person, data in entries.items %}
-                        <h4>{{ person }} - Total Hours: {{ data.total_hours|floatformat:2 }}</h4>
-                        {% if data.projects %}
-                            <table class="report-table" cellspacing="0" cellpadding="0" border="1">
-                                <thead>
-                                    <tr>
-                                        <th width="70%">Project / Activity</th>
-                                        <th width="30%">Hours</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for project_code, project_data in data.projects.items %}
-                                        <tr class="project-row">
-                                            <td><strong>{{ project_code }}</strong></td>
-                                            <td><strong>{{ project_data.total_hours|floatformat:2 }}</strong></td>
-                                        </tr>
-                                        {% for activity, hours in project_data.activities.items %}
-                                            <tr class="activity-row">
-                                                <td>{{ activity }}</td>
-                                                <td>{{ hours|floatformat:2 }}</td>
-                                            </tr>
-                                        {% endfor %}
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        {% endif %}
-                        <hr>
+        <table class="report-table" cellspacing="0" cellpadding="0" border="1">
+            <thead>
+                <tr>
+                    <th>Project / Activity</th>
+                    {% for week_label, entries in weekly_data.items %}
+                        <th>{{ week_label }}</th>
                     {% endfor %}
-                {% else %}
-                    <p>No time entries found for this week.</p>
-                {% endif %}
-            </div>
-        {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% regroup weekly_data.items|dictsort:"1.projects.keys" by "1.projects.keys" as projects_by_week %}
+                {% for project, activities in all_projects.items %}
+                    <tr class="project-row">
+                        <td><strong>{{ project }}</strong></td>
+                        {% for week_label, entries in weekly_data.items %}
+                            <td>
+                                {% with week_project=entries.projects|get_item:project %}
+                                    {% if week_project %}
+                                        <strong>{{ week_project.total_hours|floatformat:0 }}</strong>
+                                    {% endif %}
+                                {% endwith %}
+                            </td>
+                        {% endfor %}
+                    </tr>
+                    {% for activity, hours in activities.items %}
+                        <tr class="activity-row">
+                            <td>{{ activity }}</td>
+                            {% for week_label, entries in weekly_data.items %}
+                                <td>
+                                    {% with week_project=entries.projects|get_item:project %}
+                                        {% if week_project and week_project.activities|get_item:activity %}
+                                            {{ week_project.activities|get_item:activity|floatformat:0 }}
+                                        {% endif %}
+                                    {% endwith %}
+                                </td>
+                            {% endfor %}
+                        </tr>
+                    {% endfor %}
+                {% endfor %}
+            </tbody>
+        </table>
     {% else %}
         {% if entries %}
             {% for person, data in entries.items %}
