@@ -187,6 +187,32 @@ class Command(BaseCommand):
             self.stdout.write(self.style.ERROR("Error sending email to %s: %s" % (to_email, str(e))))
             return False
 
+    def process_monthly_data(self, entries_by_week):
+        """Process entries into project-centric format with weeks"""
+        project_data = {}
+        
+        # Process each week's entries
+        for week_num, entries in entries_by_week.items():
+            for entry in entries:
+                project_code = entry.project.identifier if entry.project else 'No Project'
+                activity = entry.comments if entry.comments else (entry.activity.name if entry.activity else 'No Activity')
+                hours = float(entry.hours)
+                
+                # Initialize project if needed
+                if project_code not in project_data:
+                    project_data[project_code] = {
+                        'entries': {}
+                    }
+                
+                # Initialize activity if needed
+                if activity not in project_data[project_code]['entries']:
+                    project_data[project_code]['entries'][activity] = {}
+                
+                # Add hours to activity week
+                project_data[project_code]['entries'][activity][week_num] = hours
+        
+        return project_data
+
     def handle(self, *args, **options):
         print "\n=== Starting PI Report Generation ==="
         
@@ -231,34 +257,36 @@ class Command(BaseCommand):
                 self.stdout.write('Projects: %s' % ', '.join(project_ids))
 
                 if options.get('monthly'):
-                    # For monthly reports, break into weeks
-                    weekly_data = {}
+                    # Get entries for each week
+                    entries_by_week = {}
                     current_date = start_date
+                    week_num = 1
+                    week_numbers = []
                     
-                    # Calculate all week start dates
-                    week_starts = []
                     while current_date <= end_date:
-                        week_starts.append(current_date)
-                        current_date += timedelta(days=7)
-                    
-                    # Process each week
-                    for week_start in week_starts:
-                        week_end = min(week_start + timedelta(days=6), end_date)
-                        week_label = "Week of {}".format(week_start.strftime("%b %d"))
+                        week_end = min(current_date + timedelta(days=6), end_date)
                         
                         entries = TimeEntry.objects.filter(
                             project__identifier__in=project_ids,
-                            spent_on__range=[week_start, week_end]
+                            spent_on__range=[current_date, week_end]
                         ).select_related('user', 'project', 'activity')
                         
                         if entries.exists():
-                            weekly_data[week_label] = self.process_entries(entries)
-
+                            entries_by_week[str(week_num)] = entries
+                            week_numbers.append(str(week_num))
+                        
+                        current_date += timedelta(days=7)
+                        week_num += 1
+                    
+                    # Process data into monthly format
+                    monthly_data = self.process_monthly_data(entries_by_week)
+                    
                     context = {
-                        'weekly_data': weekly_data,
+                        'weekly_data': monthly_data,
                         'start_date': start_date,
                         'end_date': end_date,
-                        'monthly': True
+                        'monthly': True,
+                        'week_numbers': week_numbers
                     }
                 else:
                     # Weekly report
