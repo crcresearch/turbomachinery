@@ -73,18 +73,23 @@
     {% if monthly %}
         {% for employee, employee_data in weekly_data.items %}
             <h3>{{ employee }}</h3>
-            {% for project, project_data in employee_data.projects.items %}
-                <h4>{{ project }}</h4>
-                <table class="report-table" cellspacing="0" cellpadding="0" border="1">
-                    <thead>
-                        <tr>
-                            <th>Project / Activity</th>
+            <table class="report-table" cellspacing="0" cellpadding="0" border="1">
+                <thead>
+                    <tr>
+                        <th>Project / Activity</th>
+                        {% for week_num in week_numbers %}
+                            <th>Week {{ week_num }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for project, project_data in employee_data.projects.items %}
+                        <tr class="project-row">
+                            <td><strong>{{ project }}</strong></td>
                             {% for week_num in week_numbers %}
-                                <th>Week {{ week_num }}</th>
+                                <td></td>
                             {% endfor %}
                         </tr>
-                    </thead>
-                    <tbody>
                         {% for activity, weeks in project_data.entries.items %}
                             <tr class="activity-row">
                                 <td>{{ activity }}</td>
@@ -97,10 +102,9 @@
                                 {% endfor %}
                             </tr>
                         {% endfor %}
-                    </tbody>
-                </table>
-                <br>
-            {% endfor %}
+                    {% endfor %}
+                </tbody>
+            </table>
             <hr>
         {% endfor %}
     {% else %}
