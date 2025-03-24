@@ -195,23 +195,39 @@ class Command(BaseCommand):
         for week_num, entries in entries_by_week.items():
             for entry in entries:
                 project_code = entry.project.identifier if entry.project else 'No Project'
+                username = '%s %s' % (entry.user.firstname, entry.user.lastname)
+                username = username.strip()
                 activity = entry.comments if entry.comments else (entry.activity.name if entry.activity else 'No Activity')
                 hours = float(entry.hours)
                 
                 # Initialize project if needed
                 if project_code not in project_data:
                     project_data[project_code] = {
-                        'entries': {}
+                        'total_hours': 0,
+                        'users': {}
                     }
                 
+                # Add to project total
+                project_data[project_code]['total_hours'] += hours
+                
+                # Initialize user if not exists
+                if username not in project_data[project_code]['users']:
+                    project_data[project_code]['users'][username] = {
+                        'hours': 0,
+                        'activities': {}
+                    }
+                
+                # Add to user total
+                project_data[project_code]['users'][username]['hours'] += hours
+                
                 # Initialize activity if needed
-                if activity not in project_data[project_code]['entries']:
-                    project_data[project_code]['entries'][activity] = {}
+                if activity not in project_data[project_code]['users'][username]['activities']:
+                    project_data[project_code]['users'][username]['activities'][activity] = {}
                 
                 # Add hours to activity week
-                project_data[project_code]['entries'][activity][week_num] = hours
+                project_data[project_code]['users'][username]['activities'][activity][week_num] = hours
         
-        return project_data
+        return dict(sorted(project_data.items()))
 
     def handle(self, *args, **options):
         print "\n=== Starting PI Report Generation ==="
@@ -335,6 +351,7 @@ class Command(BaseCommand):
         print "\n=== PI Report Generation Complete ===\n"
 
     def process_entries(self, entries):
+        """Process entries for weekly report format"""
         report_data = {}
         
         for entry in entries:
@@ -366,7 +383,7 @@ class Command(BaseCommand):
             # Add to user total
             report_data[project_code]['users'][username]['hours'] += hours
             
-            # Add to activity data (using comments)
+            # Add to activity data
             if activity not in report_data[project_code]['users'][username]['activities']:
                 report_data[project_code]['users'][username]['activities'][activity] = {
                     'hours': hours
