@@ -266,19 +266,19 @@ class Command(BaseCommand):
             for pi_email, project_ids in pi_mappings:
                 # Handle test email case first
                 if options.get('test_email'):
-                    to_email = options.get('test_email')
+                    to_emails = [options.get('test_email')]
                 else:
                     # If there's a comma, handle multiple emails, otherwise treat as single email
                     if ',' in pi_email:
                         email_addresses = [email.strip() for email in pi_email.split(',')]
-                        # Take the first valid email
+                        # Get all valid emails
                         valid_emails = [email for email in email_addresses if self.is_email(email)]
                         if not valid_emails:
                             self.stdout.write(self.style.WARNING(
                                 'Skipping invalid email(s): %s' % pi_email
                             ))
                             continue
-                        to_email = valid_emails[0]  # Use first valid email
+                        to_emails = valid_emails
                     else:
                         # Single email case
                         if not self.is_email(pi_email.strip()):
@@ -286,9 +286,9 @@ class Command(BaseCommand):
                                 'Skipping invalid email: %s' % pi_email
                             ))
                             continue
-                        to_email = pi_email.strip()
+                        to_emails = [pi_email.strip()]
 
-                self.stdout.write('\nProcessing Financial PI: %s' % to_email)
+                self.stdout.write('\nProcessing Financial PI: %s' % ', '.join(to_emails))
                 self.stdout.write('Projects: %s' % ', '.join(project_ids))
 
                 if options.get('monthly'):
@@ -345,8 +345,10 @@ class Command(BaseCommand):
                         end_date.strftime('%b %d')
                     )
 
-                    self.send_notification(to_email, html_content, subject)
-                    self.stdout.write(self.style.SUCCESS('Sent report to %s' % to_email))
+                    # Send to each valid email
+                    for to_email in to_emails:
+                        self.send_notification(to_email, html_content, subject)
+                        self.stdout.write(self.style.SUCCESS('Sent report to %s' % to_email))
             
         except Exception as e:
             self.stdout.write(self.style.ERROR('Error: %s' % str(e)))
