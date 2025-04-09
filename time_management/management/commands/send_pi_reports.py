@@ -62,49 +62,29 @@ class Command(BaseCommand):
         
         today = timezone.now().date()
         
-        # Only bypass day check if explicitly testing
-        if options and (options.get('print') or options.get('test_email')):
-            if monthly:
-                start_date = today.replace(day=1)
-                end_date = today
+        if monthly:
+            # Get last day of previous month
+            if today.month == 1:  # January
+                prev_month_end = today.replace(year=today.year-1, month=12, day=31)
             else:
-                # Get previous week (Saturday through Friday)
-                end_date = today - timedelta(days=(today.weekday() + 3) % 7)
-                start_date = end_date - timedelta(days=6)
+                prev_month_end = today.replace(day=1) - timedelta(days=1)
+            
+            # Find the last Friday of previous month
+            last_friday = prev_month_end
+            while last_friday.weekday() != 4:  # 4 is Friday
+                last_friday -= timedelta(days=1)
+            
+            # Start date is the day after the last Friday of previous month
+            start_date = last_friday + timedelta(days=1)
+            # End date is today
+            end_date = today
+            
             return start_date, end_date
-        
-        # Production checks - no bypass
-        if monthly and today.weekday() == 4:  # If it's Friday
-            # Check if it's the last Friday of the month
-            next_week = today + timedelta(days=7)
-            if next_week.month != today.month:
-                # For May 30th report, start from April 26th (day after last report)
-                if today.month == 1:  # January
-                    prev_month_end = today.replace(year=today.year-1, month=12, day=31)
-                else:
-                    # Get last day of previous month
-                    prev_month_end = today.replace(day=1) - timedelta(days=1)
-                
-                # Find the last Friday of previous month
-                last_friday = prev_month_end
-                while last_friday.weekday() != 4:  # 4 is Friday
-                    last_friday -= timedelta(days=1)
-                
-                # Start date is the day after the last Friday of previous month
-                start_date = last_friday + timedelta(days=1)
-                # End date is today (current last Friday)
-                end_date = today
-                
-                return start_date, end_date
-            return None, None  # Not the last Friday
-        
-        elif not monthly and today.weekday() == 0:  # If it's Monday
-            # Get previous week (Saturday through Friday)
-            end_date = today - timedelta(days=3)
+        else:
+            # Weekly report logic remains unchanged
+            end_date = today - timedelta(days=(today.weekday() + 3) % 7)
             start_date = end_date - timedelta(days=6)
             return start_date, end_date
-        
-        return None, None  # Not Monday or last Friday
 
     def get_financial_pis_with_emails(self):
         """Get all Financial PIs and their email addresses."""
