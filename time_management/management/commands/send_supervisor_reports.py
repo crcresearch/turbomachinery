@@ -381,21 +381,37 @@ class Command(BaseCommand):
             
             return [row[0] for row in cursor.fetchall()]
 
-    def handle(self, *args, **options):
-        # Get dates from options or use defaults
-        start_date, end_date = self.get_report_dates(options.get('monthly', False), options)
-        print("\nDate Range: %s to %s" % (start_date, end_date))  # Fix print statement
-
-        monthly = options.get('monthly', False)
-        test_email = options.get('test_email')
-
+    def get_db_credentials(self):
+        """Read database credentials from database1_env file"""
+        credentials = {}
         try:
-            # For testing, still get all supervisors but send separate emails
+            with open('config/db/database1_env', 'r') as f:
+                for line in f:
+                    if '=' in line:
+                        key, value = line.strip().split('=', 1)
+                        # Remove quotes if present
+                        value = value.strip('"')
+                        credentials[key] = value
+            return credentials
+        except Exception as e:
+            self.stdout.write(self.style.ERROR('Error reading database credentials: %s' % str(e)))
+            raise
+
+    def handle(self, *args, **options):
+        print "\n=== Starting Supervisor Report Generation ==="
+        
+        start_date, end_date = self.get_report_dates(options.get('monthly', False), options)
+        print "\nDate Range: %s to %s" % (start_date, end_date)
+        
+        try:
+            # Get credentials from file
+            db_creds = self.get_db_credentials()
+            
             connection = psycopg2.connect(
                 host='database1',
-                database='redmine',
-                user='postgres',
-                password="Let's go turbo!"
+                database=db_creds.get('POSTGRES_DB'),
+                user=db_creds.get('POSTGRES_USER'),
+                password=db_creds.get('POSTGRES_PASSWORD')
             )
             cursor = connection.cursor()
             
@@ -429,7 +445,7 @@ class Command(BaseCommand):
                 team_members = RedmineUser.objects.filter(id__in=team_members)
 
                 if team_members:
-                    if monthly:
+                    if options.get('monthly', False):
                         entries_by_week = {}
                         current_date = start_date
                         week_num = 1
@@ -487,14 +503,14 @@ class Command(BaseCommand):
                     if entries.exists():
                         html_content = render_to_string('emails/supervisor_monthly_report.html', context)
                         subject = 'NDTL Supervisor %s Report (%s - %s)' % (
-                            'Monthly' if monthly else 'Weekly',
+                            'Monthly' if options.get('monthly', False) else 'Weekly',
                             start_date.strftime('%b %d'),
                             end_date.strftime('%b %d')
                         )
 
                         # Send to test email but keep supervisor name in subject
-                        to_email = test_email if test_email else supervisor_email
-                        if test_email:
+                        to_email = options.get('test_email') if options.get('test_email') else supervisor_email
+                        if options.get('test_email'):
                             subject = '[%s] %s' % (supervisor_email, subject)
 
                         self.send_notification(to_email, html_content, subject)

@@ -241,6 +241,22 @@ class Command(BaseCommand):
         
         return dict(sorted(project_data.items()))
 
+    def get_db_credentials(self):
+        """Read database credentials from database1_env file"""
+        credentials = {}
+        try:
+            with open('config/db/database1_env', 'r') as f:
+                for line in f:
+                    if '=' in line:
+                        key, value = line.strip().split('=', 1)
+                        # Remove quotes if present
+                        value = value.strip('"')
+                        credentials[key] = value
+            return credentials
+        except Exception as e:
+            self.stdout.write(self.style.ERROR('Error reading database credentials: %s' % str(e)))
+            raise
+
     def handle(self, *args, **options):
         print "\n=== Starting PI Report Generation ==="
         
@@ -248,11 +264,14 @@ class Command(BaseCommand):
         print "\nDate Range: %s to %s" % (start_date, end_date)
         
         try:
+            # Get credentials from file
+            db_creds = self.get_db_credentials()
+            
             connection = psycopg2.connect(
                 host='database1',
-                database='redmine',
-                user='postgres',
-                password="Let's go turbo!"
+                database=db_creds.get('POSTGRES_DB'),
+                user=db_creds.get('POSTGRES_USER'),
+                password=db_creds.get('POSTGRES_PASSWORD')
             )
             cursor = connection.cursor()
             
