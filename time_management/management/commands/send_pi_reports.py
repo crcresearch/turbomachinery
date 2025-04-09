@@ -13,7 +13,6 @@ from email.mime.text import MIMEText
 import psycopg2
 import time  # Add at the top with other imports
 from email.mime.multipart import MIMEMultipart
-import os
 
 logger = logging.getLogger(__name__)
 
@@ -243,19 +242,24 @@ class Command(BaseCommand):
         return dict(sorted(project_data.items()))
 
     def get_db_credentials(self):
-        """Get database credentials from environment variables"""
-        credentials = {
-            'POSTGRES_DB': os.environ.get('POSTGRES_DB'),
-            'POSTGRES_USER': os.environ.get('POSTGRES_USER'),
-            'POSTGRES_PASSWORD': os.environ.get('POSTGRES_PASSWORD')
-        }
-        
-        # Check if we have all required credentials
-        missing = [k for k, v in credentials.items() if not v]
-        if missing:
-            raise ValueError("Missing required environment variables: %s" % ', '.join(missing))
-        
-        return credentials
+        """Read database credentials from database1_env file"""
+        credentials = {}
+        try:
+            # Use path from Docker volume mount
+            db_env_path = '/srv/config/db/database1_env'
+            self.stdout.write("Reading credentials from: %s" % db_env_path)
+            
+            with open(db_env_path, 'r') as f:
+                for line in f:
+                    if '=' in line:
+                        key, value = line.strip().split('=', 1)
+                        # Remove quotes if present
+                        value = value.strip('"')
+                        credentials[key] = value
+            return credentials
+        except Exception as e:
+            self.stdout.write(self.style.ERROR('Error reading database credentials: %s' % str(e)))
+            raise
 
     def handle(self, *args, **options):
         print "\n=== Starting PI Report Generation ==="

@@ -385,8 +385,8 @@ class Command(BaseCommand):
         """Read database credentials from database1_env file"""
         credentials = {}
         try:
-            # Use absolute path in Docker container
-            db_env_path = '/opt/turbomachinery/config/db/database1_env'
+            # Use path from Docker volume mount
+            db_env_path = '/srv/config/db/database1_env'
             self.stdout.write("Reading credentials from: %s" % db_env_path)
             
             with open(db_env_path, 'r') as f:
