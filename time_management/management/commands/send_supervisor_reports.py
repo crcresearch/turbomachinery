@@ -386,7 +386,10 @@ class Command(BaseCommand):
         credentials = {}
         try:
             # Use absolute path in Docker container
-            with open('/opt/turbomachinery/config/db/database1_env', 'r') as f:
+            db_env_path = '/srv/config/db/database1_env'
+            self.stdout.write("Reading credentials from: %s" % db_env_path)
+            
+            with open(db_env_path, 'r') as f:
                 for line in f:
                     if '=' in line:
                         key, value = line.strip().split('=', 1)
