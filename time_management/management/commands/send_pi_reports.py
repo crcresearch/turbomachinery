@@ -245,7 +245,8 @@ class Command(BaseCommand):
         """Read database credentials from database1_env file"""
         credentials = {}
         try:
-            with open('config/db/database1_env', 'r') as f:
+            # Use absolute path in Docker container
+            with open('/opt/turbomachinery/config/db/database1_env', 'r') as f:
                 for line in f:
                     if '=' in line:
                         key, value = line.strip().split('=', 1)
