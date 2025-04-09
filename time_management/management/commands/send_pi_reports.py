@@ -53,14 +53,13 @@ class Command(BaseCommand):
 
     def get_report_dates(self, monthly=False, options=None):
         """Get start and end dates for the report period."""
-        # If start_date and end_date are provided in options, use those
+        # Check for explicit dates first
         if options and options.get('start_date') and options.get('end_date'):
-            start_date = datetime.strptime(options['start_date'], '%Y-%m-%d').date()
-            end_date = datetime.strptime(options['end_date'], '%Y-%m-%d').date()
-            print("\nUsing provided dates: %s to %s" % (start_date, end_date))
-            return start_date, end_date
+            return (
+                datetime.strptime(options['start_date'], '%Y-%m-%d').date(),
+                datetime.strptime(options['end_date'], '%Y-%m-%d').date()
+            )
         
-        # Otherwise use default date logic
         today = timezone.now().date()
         
         # Only bypass day check if explicitly testing
@@ -70,8 +69,8 @@ class Command(BaseCommand):
                 end_date = today
             else:
                 # Get previous week (Saturday through Friday)
-                end_date = today - timedelta(days=(today.weekday() + 3) % 7)  # Previous Friday
-                start_date = end_date - timedelta(days=6)  # Previous Saturday
+                end_date = today - timedelta(days=(today.weekday() + 3) % 7)
+                start_date = end_date - timedelta(days=6)
             return start_date, end_date
         
         # Production checks - no bypass
@@ -79,17 +78,30 @@ class Command(BaseCommand):
             # Check if it's the last Friday of the month
             next_week = today + timedelta(days=7)
             if next_week.month != today.month:
-                # Get first day of the month
-                start_date = today.replace(day=1)
-                # End date is today
+                # For May 30th report, start from April 26th (day after last report)
+                if today.month == 1:  # January
+                    prev_month_end = today.replace(year=today.year-1, month=12, day=31)
+                else:
+                    # Get last day of previous month
+                    prev_month_end = today.replace(day=1) - timedelta(days=1)
+                
+                # Find the last Friday of previous month
+                last_friday = prev_month_end
+                while last_friday.weekday() != 4:  # 4 is Friday
+                    last_friday -= timedelta(days=1)
+                
+                # Start date is the day after the last Friday of previous month
+                start_date = last_friday + timedelta(days=1)
+                # End date is today (current last Friday)
                 end_date = today
+                
                 return start_date, end_date
             return None, None  # Not the last Friday
         
         elif not monthly and today.weekday() == 0:  # If it's Monday
             # Get previous week (Saturday through Friday)
-            end_date = today - timedelta(days=3)  # Previous Friday
-            start_date = end_date - timedelta(days=6)  # Previous Saturday
+            end_date = today - timedelta(days=3)
+            start_date = end_date - timedelta(days=6)
             return start_date, end_date
         
         return None, None  # Not Monday or last Friday
@@ -229,6 +241,22 @@ class Command(BaseCommand):
         
         return dict(sorted(project_data.items()))
 
+    def get_db_credentials(self):
+        """Read database credentials from database1_env file"""
+        credentials = {}
+        try:
+            with open('config/db/database1_env', 'r') as f:
+                for line in f:
+                    if '=' in line:
+                        key, value = line.strip().split('=', 1)
+                        # Remove quotes if present
+                        value = value.strip('"')
+                        credentials[key] = value
+            return credentials
+        except Exception as e:
+            self.stdout.write(self.style.ERROR('Error reading database credentials: %s' % str(e)))
+            raise
+
     def handle(self, *args, **options):
         print "\n=== Starting PI Report Generation ==="
         
@@ -236,11 +264,14 @@ class Command(BaseCommand):
         print "\nDate Range: %s to %s" % (start_date, end_date)
         
         try:
+            # Get credentials from file
+            db_creds = self.get_db_credentials()
+            
             connection = psycopg2.connect(
                 host='database1',
-                database='redmine',
-                user='postgres',
-                password="Let's go turbo!"
+                database=db_creds.get('POSTGRES_DB'),
+                user=db_creds.get('POSTGRES_USER'),
+                password=db_creds.get('POSTGRES_PASSWORD')
             )
             cursor = connection.cursor()
             

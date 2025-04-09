@@ -62,12 +62,12 @@ class Command(BaseCommand):
         # Only bypass day check if explicitly testing
         if options and (options.get('print') or options.get('test_email')):
             if monthly:
-                start_date = today.replace(day=1)  # First day of month
+                start_date = today.replace(day=1)
                 end_date = today
             else:
                 # Get previous week (Saturday through Friday)
-                end_date = today - timedelta(days=(today.weekday() + 3) % 7)  # Previous Friday
-                start_date = end_date - timedelta(days=6)  # Previous Saturday
+                end_date = today - timedelta(days=(today.weekday() + 3) % 7)
+                start_date = end_date - timedelta(days=6)
             return start_date, end_date
         
         # Production checks - no bypass
@@ -75,17 +75,30 @@ class Command(BaseCommand):
             # Check if it's the last Friday of the month
             next_week = today + timedelta(days=7)
             if next_week.month != today.month:
-                # Get first day of the month
-                start_date = today.replace(day=1)
-                # End date is today
+                # For May 30th report, start from April 26th (day after last report)
+                if today.month == 1:  # January
+                    prev_month_end = today.replace(year=today.year-1, month=12, day=31)
+                else:
+                    # Get last day of previous month
+                    prev_month_end = today.replace(day=1) - timedelta(days=1)
+                
+                # Find the last Friday of previous month
+                last_friday = prev_month_end
+                while last_friday.weekday() != 4:  # 4 is Friday
+                    last_friday -= timedelta(days=1)
+                
+                # Start date is the day after the last Friday of previous month
+                start_date = last_friday + timedelta(days=1)
+                # End date is today (current last Friday)
                 end_date = today
+                
                 return start_date, end_date
             return None, None  # Not the last Friday
         
         elif not monthly and today.weekday() == 0:  # If it's Monday
             # Get previous week (Saturday through Friday)
-            end_date = today - timedelta(days=3)  # Previous Friday
-            start_date = end_date - timedelta(days=6)  # Previous Saturday
+            end_date = today - timedelta(days=3)
+            start_date = end_date - timedelta(days=6)
             return start_date, end_date
         
         return None, None  # Not Monday or last Friday
@@ -368,21 +381,37 @@ class Command(BaseCommand):
             
             return [row[0] for row in cursor.fetchall()]
 
-    def handle(self, *args, **options):
-        # Get dates from options or use defaults
-        start_date, end_date = self.get_report_dates(options.get('monthly', False), options)
-        print("\nDate Range: %s to %s" % (start_date, end_date))  # Fix print statement
-
-        monthly = options.get('monthly', False)
-        test_email = options.get('test_email')
-
+    def get_db_credentials(self):
+        """Read database credentials from database1_env file"""
+        credentials = {}
         try:
-            # For testing, still get all supervisors but send separate emails
+            with open('config/db/database1_env', 'r') as f:
+                for line in f:
+                    if '=' in line:
+                        key, value = line.strip().split('=', 1)
+                        # Remove quotes if present
+                        value = value.strip('"')
+                        credentials[key] = value
+            return credentials
+        except Exception as e:
+            self.stdout.write(self.style.ERROR('Error reading database credentials: %s' % str(e)))
+            raise
+
+    def handle(self, *args, **options):
+        print "\n=== Starting Supervisor Report Generation ==="
+        
+        start_date, end_date = self.get_report_dates(options.get('monthly', False), options)
+        print "\nDate Range: %s to %s" % (start_date, end_date)
+        
+        try:
+            # Get credentials from file
+            db_creds = self.get_db_credentials()
+            
             connection = psycopg2.connect(
                 host='database1',
-                database='redmine',
-                user='postgres',
-                password="Let's go turbo!"
+                database=db_creds.get('POSTGRES_DB'),
+                user=db_creds.get('POSTGRES_USER'),
+                password=db_creds.get('POSTGRES_PASSWORD')
             )
             cursor = connection.cursor()
             
@@ -416,7 +445,7 @@ class Command(BaseCommand):
                 team_members = RedmineUser.objects.filter(id__in=team_members)
 
                 if team_members:
-                    if monthly:
+                    if options.get('monthly', False):
                         entries_by_week = {}
                         current_date = start_date
                         week_num = 1
@@ -474,14 +503,14 @@ class Command(BaseCommand):
                     if entries.exists():
                         html_content = render_to_string('emails/supervisor_monthly_report.html', context)
                         subject = 'NDTL Supervisor %s Report (%s - %s)' % (
-                            'Monthly' if monthly else 'Weekly',
+                            'Monthly' if options.get('monthly', False) else 'Weekly',
                             start_date.strftime('%b %d'),
                             end_date.strftime('%b %d')
                         )
 
                         # Send to test email but keep supervisor name in subject
-                        to_email = test_email if test_email else supervisor_email
-                        if test_email:
+                        to_email = options.get('test_email') if options.get('test_email') else supervisor_email
+                        if options.get('test_email'):
                             subject = '[%s] %s' % (supervisor_email, subject)
 
                         self.send_notification(to_email, html_content, subject)
