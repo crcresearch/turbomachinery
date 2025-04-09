@@ -382,24 +382,13 @@ class Command(BaseCommand):
             return [row[0] for row in cursor.fetchall()]
 
     def get_db_credentials(self):
-        """Read database credentials from database1_env file"""
-        credentials = {}
-        try:
-            # Use path from Docker volume mount
-            db_env_path = '/srv/config/db/database1_env'
-            self.stdout.write("Reading credentials from: %s" % db_env_path)
-            
-            with open(db_env_path, 'r') as f:
-                for line in f:
-                    if '=' in line:
-                        key, value = line.strip().split('=', 1)
-                        # Remove quotes if present
-                        value = value.strip('"')
-                        credentials[key] = value
-            return credentials
-        except Exception as e:
-            self.stdout.write(self.style.ERROR('Error reading database credentials: %s' % str(e)))
-            raise
+        """Get database credentials"""
+        credentials = {
+            'POSTGRES_DB': 'redmine',
+            'POSTGRES_USER': 'postgres',
+            'POSTGRES_PASSWORD': "Let's go turbo!"
+        }
+        return credentials
 
     def handle(self, *args, **options):
         print "\n=== Starting Supervisor Report Generation ==="
