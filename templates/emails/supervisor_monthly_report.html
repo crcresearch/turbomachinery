@@ -176,18 +176,18 @@
                                     <td><strong>{{ project_code }}</strong></td>
                                     <td><strong>{{ project_data.total_hours|floatformat:2 }}</strong></td>
                                 </tr>
-                                {% for activity, hours in project_data.activities.items %}
+                                {% for activity, activity_data in project_data.activities.items %}
                                     <tr class="activity-row">
                                         <td>{{ activity }}</td>
-                                        <td>{{ hours|floatformat:2 }}</td>
+                                        <td>{{ activity_data.hours|floatformat:2 }}</td>
                                     </tr>
                                 {% endfor %}
-                                <!-- Weekly report table with single total column -->
-                                <tr style="border-top: 2px solid black; font-weight: bold;">
-                                    <td>Total Hours</td>
-                                    <td style="text-align: right;">{{ project_data.total_column|floatformat:1 }}</td>
-                                </tr>
                             {% endfor %}
+                            <!-- Project total row -->
+                            <tr style="border-top: 2px solid black; font-weight: bold;">
+                                <td>Total Hours</td>
+                                <td>{{ data.total_hours|floatformat:2 }}</td>
+                            </tr>
                         </tbody>
                     </table>
                 {% endif %}

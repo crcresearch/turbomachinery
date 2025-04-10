@@ -85,7 +85,7 @@ class Command(BaseCommand):
 
     def send_notification(self, to_email, message_body, message_subject):
         msg = MIMEText(message_body, 'html')
-        msg['Subject'] = message_subject
+        msg['Subject'] = 'NDTL Supervisor Weekly Report (Mar 29 - Apr 04)'  # This should be dynamic
         msg['From'] = 'noreply@turbo.crc.nd.edu'
         msg['To'] = to_email
         
@@ -93,7 +93,7 @@ class Command(BaseCommand):
         smtp.sendmail('noreply@turbo.crc.nd.edu', [to_email], msg.as_string())
         smtp.close()
         
-        time.sleep(60)  # Wait 5 seconds between emails
+        time.sleep(60)  # Wait between emails
 
     def send_supervisor_report(self, supervisor_email, start_date, end_date, options, team_members):
         print("\nProcessing supervisor:", supervisor_email)
