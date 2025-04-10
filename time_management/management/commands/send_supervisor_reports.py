@@ -354,10 +354,10 @@ class Command(BaseCommand):
         try:
             cursor = connection.cursor()
             cursor.execute("""
-                SELECT u.firstname, u.lastname
-                FROM users u
-                WHERE u.mail = %s
-                AND u.status = 1
+                SELECT firstname, lastname
+                FROM users
+                WHERE mail = %s
+                AND status = 1
                 LIMIT 1;
             """, [supervisor_email])
             
