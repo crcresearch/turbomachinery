@@ -182,9 +182,11 @@ class Command(BaseCommand):
     def process_monthly_data(self, entries_by_week):
         """Process entries into project-centric format with weeks"""
         project_data = {}
+        column_totals = {}  # Track totals for each week
         
         # Process each week's entries
         for week_num, entries in entries_by_week.items():
+            column_totals[week_num] = 0  # Initialize week total
             for entry in entries:
                 project_code = entry.project.identifier if entry.project else 'No Project'
                 username = '%s %s' % (entry.user.firstname, entry.user.lastname)
@@ -192,11 +194,15 @@ class Command(BaseCommand):
                 activity = entry.comments if entry.comments else (entry.activity.name if entry.activity else 'No Activity')
                 hours = float(entry.hours)
                 
+                # Add to column total for this week
+                column_totals[week_num] += hours
+                
                 # Initialize project if needed
                 if project_code not in project_data:
                     project_data[project_code] = {
                         'total_hours': 0,
-                        'users': {}
+                        'users': {},
+                        'column_totals': column_totals  # Add column totals to project data
                     }
                 
                 # Add to project total
@@ -218,6 +224,10 @@ class Command(BaseCommand):
                 
                 # Add hours to activity week
                 project_data[project_code]['users'][username]['activities'][activity][week_num] = hours
+        
+        # Add column totals to each project
+        for project in project_data.values():
+            project['column_totals'] = column_totals
         
         return dict(sorted(project_data.items()))
 
@@ -266,19 +276,19 @@ class Command(BaseCommand):
             for pi_email, project_ids in pi_mappings:
                 # Handle test email case first
                 if options.get('test_email'):
-                    to_email = options.get('test_email')
+                    to_emails = [options.get('test_email')]
                 else:
                     # If there's a comma, handle multiple emails, otherwise treat as single email
                     if ',' in pi_email:
                         email_addresses = [email.strip() for email in pi_email.split(',')]
-                        # Take the first valid email
+                        # Get all valid emails
                         valid_emails = [email for email in email_addresses if self.is_email(email)]
                         if not valid_emails:
                             self.stdout.write(self.style.WARNING(
                                 'Skipping invalid email(s): %s' % pi_email
                             ))
                             continue
-                        to_email = valid_emails[0]  # Use first valid email
+                        to_emails = valid_emails
                     else:
                         # Single email case
                         if not self.is_email(pi_email.strip()):
@@ -286,9 +296,9 @@ class Command(BaseCommand):
                                 'Skipping invalid email: %s' % pi_email
                             ))
                             continue
-                        to_email = pi_email.strip()
+                        to_emails = [pi_email.strip()]
 
-                self.stdout.write('\nProcessing Financial PI: %s' % to_email)
+                self.stdout.write('\nProcessing Financial PI: %s' % ', '.join(to_emails))
                 self.stdout.write('Projects: %s' % ', '.join(project_ids))
 
                 if options.get('monthly'):
@@ -345,8 +355,10 @@ class Command(BaseCommand):
                         end_date.strftime('%b %d')
                     )
 
-                    self.send_notification(to_email, html_content, subject)
-                    self.stdout.write(self.style.SUCCESS('Sent report to %s' % to_email))
+                    # Send to each valid email
+                    for to_email in to_emails:
+                        self.send_notification(to_email, html_content, subject)
+                        self.stdout.write(self.style.SUCCESS('Sent report to %s' % to_email))
             
         except Exception as e:
             self.stdout.write(self.style.ERROR('Error: %s' % str(e)))
@@ -357,12 +369,14 @@ class Command(BaseCommand):
     def process_entries(self, entries):
         """Process entries for weekly report format"""
         report_data = {}
+        total_hours = 0  # Track total hours
         
         for entry in entries:
             project_code = entry.project.identifier if entry.project else 'No Project'
             username = '%s %s' % (entry.user.firstname, entry.user.lastname)
             username = username.strip()
             hours = float(entry.hours)
+            total_hours += hours  # Add to total
             
             # Use comments as activities if they exist
             activity = entry.comments if entry.comments else (entry.activity.name if entry.activity else 'No Activity')
@@ -371,11 +385,13 @@ class Command(BaseCommand):
             if project_code not in report_data:
                 report_data[project_code] = {
                     'total_hours': 0,
-                    'users': {}
+                    'users': {},
+                    'total_column': 0  # Add total column for weekly
                 }
             
             # Add to project total
             report_data[project_code]['total_hours'] += hours
+            report_data[project_code]['total_column'] += hours  # Add to total column
             
             # Initialize user if not exists
             if username not in report_data[project_code]['users']:
