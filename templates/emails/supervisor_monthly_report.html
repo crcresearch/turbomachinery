@@ -132,6 +132,16 @@
                                 {% endfor %}
                             </tr>
                         {% endfor %}
+                        <!-- Monthly report table with column totals -->
+                        <tr style="border-top: 2px solid black; font-weight: bold;">
+                            <td>Column Totals</td>
+                            {% for week_num in week_numbers %}
+                                <td style="text-align: right;">
+                                    {{ project_data.column_totals|get:week_num|floatformat:1 }}
+                                </td>
+                            {% endfor %}
+                            <td style="text-align: right;">{{ project_data.total_hours|floatformat:1 }}</td>
+                        </tr>
                     {% endfor %}
                 </tbody>
             </table>
@@ -161,6 +171,11 @@
                                         <td>{{ hours|floatformat:2 }}</td>
                                     </tr>
                                 {% endfor %}
+                                <!-- Weekly report table with single total column -->
+                                <tr style="border-top: 2px solid black; font-weight: bold;">
+                                    <td>Total Hours</td>
+                                    <td style="text-align: right;">{{ project_data.total_column|floatformat:1 }}</td>
+                                </tr>
                             {% endfor %}
                         </tbody>
                     </table>
