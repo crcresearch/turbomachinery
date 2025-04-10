@@ -416,12 +416,18 @@ class Command(BaseCommand):
                     ).select_related('user', 'project', 'activity')
 
                     if entries.exists():
+                        processed_entries = self.process_entries(entries)
+                        
+                        # Calculate total hours
+                        total_hours = sum(entry.hours for entry in entries)
+                        
                         context = {
-                            'entries': self.process_entries(entries),
+                            'entries': processed_entries,
                             'start_date': start_date,
                             'end_date': end_date,
                             'monthly': options.get('monthly', False),
-                            'supervisor_name': manager_name
+                            'supervisor_name': manager_name,
+                            'total_hours': total_hours  # Add total hours to context
                         }
 
                         html_content = render_to_string('emails/supervisor_monthly_report.html', context)
@@ -431,10 +437,8 @@ class Command(BaseCommand):
                             end_date.strftime('%b %d')
                         )
 
-                        # Send to test email but keep manager name in subject
+                        # Send to test email without modifying subject
                         to_email = options.get('test_email') if options.get('test_email') else manager_email
-                        if options.get('test_email'):
-                            subject = '[%s] %s' % (manager_email, subject)
 
                         self.send_notification(to_email, html_content, subject)
                         print "Sent report to %s" % to_email
