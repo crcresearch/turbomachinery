@@ -400,80 +400,49 @@ class Command(BaseCommand):
                 manager = team.manager
                 print '\nProcessing manager: {} {}'.format(manager.firstname, manager.lastname)
                 
-                # Get manager's email
-                cursor = connection.cursor()
-                cursor.execute("""
-                    SELECT address 
-                    FROM email_addresses 
-                    WHERE user_id = %s 
-                    AND is_default = true
-                    LIMIT 1;
-                """, [manager.id])
-                result = cursor.fetchone()
-                manager_email = result[0] if result else None
-                
-                if not manager_email:
-                    print "Warning: No email found for manager %s %s" % (manager.firstname, manager.lastname)
-                    continue
-                
                 # Get team members
                 team_members = TeamMember.objects.filter(team=team).values_list('member', flat=True)
-                team_members = RedmineUser.objects.filter(id__in=team_members)
+                
+                # Get time entries for all team members
+                entries = TimeEntry.objects.filter(
+                    user__in=team_members,
+                    spent_on__range=[start_date, end_date]
+                ).select_related('user', 'project', 'activity')
 
-                if team_members:
-                    manager_name = "%s %s" % (manager.firstname, manager.lastname)
+                if entries.exists():
+                    processed_entries = self.process_entries(entries)
                     
-                    if options.get('monthly', False):
-                        # Monthly report processing
-                        entries = TimeEntry.objects.filter(
-                            user__in=team_members,
-                            spent_on__range=[start_date, end_date]
-                        ).select_related('user', 'project', 'activity')
+                    context = {
+                        'entries': processed_entries,
+                        'start_date': start_date,
+                        'end_date': end_date,
+                        'monthly': options.get('monthly', False),
+                        'supervisor_name': "%s %s" % (manager.firstname, manager.lastname)
+                    }
 
-                        if entries.exists():
-                            processed_entries = self.process_entries(entries)
-                            
-                            context = {
-                                'entries': processed_entries,  # Changed from weekly_data to entries
-                                'start_date': start_date,
-                                'end_date': end_date,
-                                'monthly': True,
-                                'supervisor_name': manager_name,
-                            }
+                    html_content = render_to_string('emails/supervisor_monthly_report.html', context)
+                    subject = 'NDTL Team Manager %s Report (%s - %s)' % (
+                        'Monthly' if options.get('monthly', False) else 'Weekly',
+                        start_date.strftime('%b %d'),
+                        end_date.strftime('%b %d')
+                    )
 
-                            html_content = render_to_string('emails/supervisor_monthly_report.html', context)
-                            subject = 'NDTL Team Manager Monthly Report (%s - %s)' % (
-                                start_date.strftime('%b %d'),
-                                end_date.strftime('%b %d')
-                            )
-                    else:
-                        # Weekly report processing (unchanged)
-                        entries = TimeEntry.objects.filter(
-                            user__in=team_members,
-                            spent_on__range=[start_date, end_date]
-                        ).select_related('user', 'project', 'activity')
-
-                        if entries.exists():
-                            processed_entries = self.process_entries(entries)
-                            
-                            context = {
-                                'entries': processed_entries,
-                                'start_date': start_date,
-                                'end_date': end_date,
-                                'monthly': False,
-                                'supervisor_name': manager_name,
-                            }
-
-                            html_content = render_to_string('emails/supervisor_monthly_report.html', context)
-                            subject = 'NDTL Team Manager Weekly Report (%s - %s)' % (
-                                start_date.strftime('%b %d'),
-                                end_date.strftime('%b %d')
-                            )
-
-                    # Send the report
-                    to_email = options.get('test_email') if options.get('test_email') else manager_email
-                    self.send_notification(to_email, html_content, subject)
-                    print "Sent report to %s" % to_email
+                    # Get manager's email
+                    cursor = connection.cursor()
+                    cursor.execute("""
+                        SELECT address 
+                        FROM email_addresses 
+                        WHERE user_id = %s 
+                        AND is_default = true
+                        LIMIT 1;
+                    """, [manager.id])
+                    result = cursor.fetchone()
+                    manager_email = result[0] if result else None
+                    
+                    if manager_email:
+                        to_email = options.get('test_email') if options.get('test_email') else manager_email
+                        self.send_notification(to_email, html_content, subject)
+                        print "Sent report to %s" % to_email
 
         except Exception as e:
             print "Error: %s" % str(e)
