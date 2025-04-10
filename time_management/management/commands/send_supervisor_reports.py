@@ -275,19 +275,8 @@ class Command(BaseCommand):
         ))
 
     def process_monthly_data(self, entries_by_week):
-        """Process entries into employee-centric format with weeks"""
+        """Process entries into project-centric format with weeks"""
         monthly_data = {}
-        
-        # Get project hierarchy information
-        project_parents = {}
-        with connection.cursor() as cursor:
-            cursor.execute("""
-                SELECT p.identifier, parent.identifier 
-                FROM projects p
-                LEFT JOIN projects parent ON p.parent_id = parent.id
-                WHERE p.status = 1
-            """)
-            project_parents = dict(cursor.fetchall())
         
         # Process each week's entries
         for week_num, entries in entries_by_week.items():
@@ -300,41 +289,31 @@ class Command(BaseCommand):
                 # Initialize employee if needed
                 if employee not in monthly_data:
                     monthly_data[employee] = {
-                        'projects': {}
+                        'projects': {},
+                        'column_totals': {week: 0 for week in week_numbers}  # Initialize week totals
                     }
                 
                 # Initialize project if needed
                 if project not in monthly_data[employee]['projects']:
                     monthly_data[employee]['projects'][project] = {
+                        'weeks': {week: 0 for week in week_numbers},  # Initialize all weeks
                         'entries': {},
-                        'weeks': {},
-                        'parent_project': project_parents.get(project)  # Add parent project info
+                        'total_hours': 0
                     }
                 
                 # Add hours to project week
-                if week_num not in monthly_data[employee]['projects'][project]['weeks']:
-                    monthly_data[employee]['projects'][project]['weeks'][week_num] = 0
-                monthly_data[employee]['projects'][project]['weeks'][week_num] += hours
+                monthly_data[employee]['projects'][project]['weeks'][week_num] = monthly_data[employee]['projects'][project]['weeks'].get(week_num, 0) + hours
+                monthly_data[employee]['projects'][project]['total_hours'] += hours
+                
+                # Add to column totals
+                monthly_data[employee]['column_totals'][week_num] = monthly_data[employee]['column_totals'].get(week_num, 0) + hours
                 
                 # Initialize activity if needed
                 if activity not in monthly_data[employee]['projects'][project]['entries']:
-                    monthly_data[employee]['projects'][project]['entries'][activity] = {}
+                    monthly_data[employee]['projects'][project]['entries'][activity] = {week: 0 for week in week_numbers}
                 
                 # Add hours to activity week
                 monthly_data[employee]['projects'][project]['entries'][activity][week_num] = hours
-        
-        # Sort projects so parents come before children
-        for employee in monthly_data:
-            sorted_projects = {}
-            # First add projects without parents
-            for project, data in monthly_data[employee]['projects'].items():
-                if not data['parent_project']:
-                    sorted_projects[project] = data
-            # Then add child projects
-            for project, data in monthly_data[employee]['projects'].items():
-                if data['parent_project']:
-                    sorted_projects[project] = data
-            monthly_data[employee]['projects'] = sorted_projects
         
         return monthly_data
 

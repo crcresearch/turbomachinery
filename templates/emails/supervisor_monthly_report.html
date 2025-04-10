@@ -93,6 +93,7 @@
                         {% for week_num in week_numbers %}
                             <th>Week {{ week_num }}</th>
                         {% endfor %}
+                        <th>Total</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -111,6 +112,7 @@
                                     {% endwith %}
                                 </td>
                             {% endfor %}
+                            <td><strong>{{ project_data.total_hours|floatformat:2 }}</strong></td>
                         </tr>
                         {% for activity, weeks in project_data.entries.items %}
                             <tr class="activity-row">
@@ -132,17 +134,26 @@
                                 {% endfor %}
                             </tr>
                         {% endfor %}
-                        <!-- Monthly report table with column totals -->
-                        <tr style="border-top: 2px solid black; font-weight: bold;">
-                            <td>Column Totals</td>
-                            {% for week_num in week_numbers %}
-                                <td style="text-align: right;">
-                                    {{ project_data.column_totals|get_item:week_num|floatformat:1 }}
-                                </td>
-                            {% endfor %}
-                            <td style="text-align: right;">{{ project_data.total_hours|floatformat:1 }}</td>
-                        </tr>
                     {% endfor %}
+                    <!-- Column totals row -->
+                    <tr style="border-top: 2px solid black; font-weight: bold;">
+                        <td>Column Totals</td>
+                        {% for week_num in week_numbers %}
+                            <td>{{ employee_data.column_totals|get_item:week_num|floatformat:2 }}</td>
+                        {% endfor %}
+                        <td>
+                            {% with total=0 %}
+                                {% for week_num in week_numbers %}
+                                    {% with week_total=employee_data.column_totals|get_item:week_num %}
+                                        {% if week_total %}
+                                            {% with total=total|add:week_total %}{% endwith %}
+                                        {% endif %}
+                                    {% endwith %}
+                                {% endfor %}
+                                {{ total|floatformat:2 }}
+                            {% endwith %}
+                        </td>
+                    </tr>
                 </tbody>
             </table>
             <hr>
