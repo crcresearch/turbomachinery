@@ -381,25 +381,19 @@ class Command(BaseCommand):
         print "\nDate Range: %s to %s" % (start_date, end_date)
         
         try:
-            # Get all team managers instead of supervisors from custom_values
-            
             managers = Team.objects.select_related('manager').all()
             
             for team in managers:
                 manager = team.manager
                 print '\nProcessing manager: {} {}'.format(manager.firstname, manager.lastname)
                 
-                # Get team members for this manager
-                team_members = TeamMember.objects.filter(team=team).values_list('user', flat=True)
+                team_members = TeamMember.objects.filter(team=team).values_list('member', flat=True)
                 team_members = RedmineUser.objects.filter(id__in=team_members)
 
                 if team_members:
-                    # Rest of the report generation code remains the same...
-                    # Just change supervisor_email to manager's email and supervisor_name to manager's name
-                    manager_email = manager.mail  # or however we get manager's email
+                    manager_email = manager.mail
                     manager_name = "%s %s" % (manager.firstname, manager.lastname)
                     
-                    # Weekly report for this manager
                     entries = TimeEntry.objects.filter(
                         user__in=team_members,
                         spent_on__range=[start_date, end_date]
