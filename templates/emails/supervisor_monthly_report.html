@@ -165,40 +165,8 @@
     {% else %}
         {% if entries %}
             {% for person, data in entries.items %}
-                {% if person != 'PROJECT TOTALS - Total Hours: %.2f' %}
+                {% if person != 'PROJECT TOTALS' %}
                     <h4>{{ person }} - Total Hours: {{ data.total_hours|floatformat:2 }}</h4>
-                    {% if data.projects %}
-                        <table class="report-table" cellspacing="0" cellpadding="0" border="1">
-                            <thead>
-                                <tr>
-                                    <th width="70%">Project / Activity</th>
-                                    <th width="30%">Hours</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for project_code, project_data in data.projects.items %}
-                                    <tr class="project-row">
-                                        <td><strong>{{ project_code }}</strong></td>
-                                        <td><strong>{{ project_data.total_hours|floatformat:2 }}</strong></td>
-                                    </tr>
-                                    {% for activity, hours in project_data.activities.items %}
-                                        <tr class="activity-row">
-                                            <td>{{ activity }}</td>
-                                            <td>{{ hours|floatformat:2 }}</td>
-                                        </tr>
-                                    {% endfor %}
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    {% endif %}
-                    <hr>
-                {% endif %}
-            {% endfor %}
-
-            <!-- Project Totals Section -->
-            {% for person, data in entries.items %}
-                {% if 'PROJECT TOTALS' in person %}
-                    <h4>{{ person }}</h4>
                     <table class="report-table" cellspacing="0" cellpadding="0" border="1">
                         <thead>
                             <tr>
@@ -214,15 +182,35 @@
                                 </tr>
                                 {% for activity, hours in project_data.activities.items %}
                                     <tr class="activity-row">
-                                        <td>{{ activity }}</td>
+                                        <td style="padding-left: 20px">{{ activity }}</td>
                                         <td>{{ hours|floatformat:2 }}</td>
                                     </tr>
                                 {% endfor %}
                             {% endfor %}
                         </tbody>
                     </table>
+                    <br>
                 {% endif %}
             {% endfor %}
+
+            <!-- Project Totals Section -->
+            <h4>PROJECT TOTALS - Total Hours: {{ entries.PROJECT_TOTALS.total_hours|floatformat:2 }}</h4>
+            <table class="report-table" cellspacing="0" cellpadding="0" border="1">
+                <thead>
+                    <tr>
+                        <th width="70%">Project / Activity</th>
+                        <th width="30%">Hours</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for project_code, project_data in entries.PROJECT_TOTALS.projects.items %}
+                        <tr class="project-row">
+                            <td><strong>{{ project_code }}</strong></td>
+                            <td><strong>{{ project_data.total_hours|floatformat:2 }}</strong></td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         {% else %}
             <p>No time entries found for this period.</p>
         {% endif %}
