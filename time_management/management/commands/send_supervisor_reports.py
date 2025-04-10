@@ -423,7 +423,8 @@ class Command(BaseCommand):
             if username not in report_data:
                 report_data[username] = {
                     'projects': {},
-                    'total_hours': 0
+                    'total_hours': 0,
+                    'weekly_totals': {w[0]: 0 for w in week_ranges}  # Add weekly totals tracking
                 }
             
             # Initialize project
@@ -447,6 +448,7 @@ class Command(BaseCommand):
                 report_data[username]['projects'][project_code]['activities'][activity]['weeks'].get(entry_week, 0) + hours
             report_data[username]['projects'][project_code]['total_hours'] += hours
             report_data[username]['total_hours'] += hours
+            report_data[username]['weekly_totals'][entry_week] += hours  # Add to weekly total
         
         return report_data, [w[0] for w in week_ranges]
 
