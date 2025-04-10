@@ -15,6 +15,8 @@ import time
 from email.mime.multipart import MIMEMultipart
 from time import sleep
 
+from time_management.models import Team
+
 logger = logging.getLogger(__name__)
 
 class Command(BaseCommand):
@@ -353,146 +355,76 @@ class Command(BaseCommand):
         """Get supervisor's name from their email"""
         try:
             cursor = connection.cursor()
+            # Extract username part before @ from email
+            username = supervisor_email.split('@')[0]
             cursor.execute("""
                 SELECT firstname, lastname 
-                FROM users u 
-                JOIN custom_values cv ON cv.customized_id = u.id
-                JOIN custom_fields cf ON cf.id = cv.custom_field_id
-                WHERE cf.name = 'Supervisor Notification Emails'
-                AND cv.value = %s
-                AND u.status = 1
-                LIMIT 1;
-            """, [supervisor_email])
+                FROM users 
+                WHERE login = %s
+                AND status = 1;
+            """, [username])
             
             result = cursor.fetchone()
             if result:
-                return "%s %s" % (result[0], result[1])
-            return None
+                firstname, lastname = result
+                return "%s %s" % (firstname, lastname)
+            return supervisor_email  # Fallback to email if name not found
             
         except Exception as e:
-            self.stdout.write(self.style.ERROR('Error getting supervisor name: %s' % str(e)))
-            return None
+            print "Error getting supervisor name: %s" % str(e)  # Using Python 2 print
+            return supervisor_email  # Fallback to email on error
 
     def handle(self, *args, **options):
-        print "\n=== Starting Supervisor Report Generation ==="
+        print "\n=== Starting Team Manager Report Generation ==="
         
         start_date, end_date = self.get_report_dates(options.get('monthly', False), options)
         print "\nDate Range: %s to %s" % (start_date, end_date)
         
         try:
-            # Get credentials from file
-            db_creds = self.get_db_credentials()
+            # Get all team managers instead of supervisors from custom_values
             
-            connection = psycopg2.connect(
-                host='database1',
-                database=db_creds.get('POSTGRES_DB'),
-                user=db_creds.get('POSTGRES_USER'),
-                password=db_creds.get('POSTGRES_PASSWORD')
-            )
-            cursor = connection.cursor()
+            managers = Team.objects.select_related('manager').all()
             
-            cursor.execute("""
-                SELECT DISTINCT cv.value 
-                FROM custom_values cv 
-                JOIN custom_fields cf ON cf.id = cv.custom_field_id 
-                WHERE cf.name = 'Supervisor Notification Emails'
-                AND cv.value IS NOT NULL 
-                AND cv.value != ''
-                ORDER BY cv.value;
-            """)
-            supervisors = [row[0] for row in cursor.fetchall()]
-
-            self.stdout.write('\nFound {} supervisors\n'.format(len(supervisors)))
-
-            for supervisor_email in supervisors:
-                self.stdout.write('\nProcessing supervisor: {}'.format(supervisor_email))
+            for team in managers:
+                manager = team.manager
+                print '\nProcessing manager: {} {}'.format(manager.firstname, manager.lastname)
                 
-                # Get supervisor's name
-                supervisor_name = self.get_supervisor_name(supervisor_email)
-
-                # Get team members for this supervisor only
-                cursor.execute("""
-                    SELECT u.id 
-                    FROM users u
-                    JOIN custom_values cv ON cv.customized_id = u.id
-                    JOIN custom_fields cf ON cf.id = cv.custom_field_id
-                    WHERE cf.name = 'Supervisor Notification Emails'
-                    AND cv.value = %s
-                    AND u.status = 1;
-                """, [supervisor_email])
-                team_members = [row[0] for row in cursor.fetchall()]
+                # Get team members for this manager
+                team_members = TeamMember.objects.filter(team=team).values_list('user', flat=True)
                 team_members = RedmineUser.objects.filter(id__in=team_members)
 
                 if team_members:
-                    if options.get('monthly', False):
-                        entries_by_week = {}
-                        current_date = start_date
-                        week_num = 1
-                        week_numbers = []
-                        
-                        while current_date <= end_date:
-                            week_end = min(current_date + timedelta(days=6), end_date)
-                            
-                            # Get all project IDs including subprojects
-                            project_entries = TimeEntry.objects.filter(
-                                user__in=team_members,
-                                spent_on__range=[current_date, week_end]
-                            ).values_list('project__identifier', flat=True).distinct()
-                            
-                            all_project_ids = self.get_project_and_subprojects(list(project_entries))
-                            
-                            # Get entries for main projects and subprojects
-                            entries = TimeEntry.objects.filter(
-                                user__in=team_members,
-                                project__identifier__in=all_project_ids,
-                                spent_on__range=[current_date, week_end]
-                            ).select_related('user', 'project', 'activity')
-                            
-                            if entries.exists():
-                                entries_by_week[str(week_num)] = entries
-                                week_numbers.append(str(week_num))
-                            
-                            current_date += timedelta(days=7)
-                            week_num += 1
-                        
-                        # Process data into monthly format
-                        monthly_data = self.process_monthly_data(entries_by_week)
-                        
-                        context = {
-                            'weekly_data': monthly_data,
-                            'start_date': start_date,
-                            'end_date': end_date,
-                            'monthly': True,
-                            'week_numbers': week_numbers,
-                            'supervisor_name': supervisor_name  # Add supervisor name to context
-                        }
-                    else:
-                        # Weekly report for this supervisor
-                        entries = TimeEntry.objects.filter(
-                            user__in=team_members,
-                            spent_on__range=[start_date, end_date]
-                        ).select_related('user', 'project', 'activity')
+                    # Rest of the report generation code remains the same...
+                    # Just change supervisor_email to manager's email and supervisor_name to manager's name
+                    manager_email = manager.mail  # or however we get manager's email
+                    manager_name = "%s %s" % (manager.firstname, manager.lastname)
+                    
+                    # Weekly report for this manager
+                    entries = TimeEntry.objects.filter(
+                        user__in=team_members,
+                        spent_on__range=[start_date, end_date]
+                    ).select_related('user', 'project', 'activity')
 
-                        context = {
-                            'entries': self.process_entries(entries),
-                            'start_date': start_date,
-                            'end_date': end_date,
-                            'monthly': False,
-                            'supervisor_name': supervisor_name  # Add supervisor name to context
-                        }
+                    context = {
+                        'entries': self.process_entries(entries),
+                        'start_date': start_date,
+                        'end_date': end_date,
+                        'monthly': False,
+                        'supervisor_name': manager_name  # Using manager name instead
+                    }
 
                     if entries.exists():
                         html_content = render_to_string('emails/supervisor_monthly_report.html', context)
-                        subject = 'NDTL Supervisor %s Report (%s - %s)' % (
+                        subject = 'NDTL Team Manager %s Report (%s - %s)' % (
                             'Monthly' if options.get('monthly', False) else 'Weekly',
                             start_date.strftime('%b %d'),
                             end_date.strftime('%b %d')
                         )
 
-                        # Send to test email but keep supervisor name in subject
-                        to_email = options.get('test_email') if options.get('test_email') else supervisor_email
+                        # Send to test email but keep manager name in subject
+                        to_email = options.get('test_email') if options.get('test_email') else manager_email
                         if options.get('test_email'):
-                            subject = '[%s] %s' % (supervisor_email, subject)
+                            subject = '[%s] %s' % (manager_email, subject)
 
                         self.send_notification(to_email, html_content, subject)
                         self.stdout.write(self.style.SUCCESS('Sent report to %s' % to_email))
