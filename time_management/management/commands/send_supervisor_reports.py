@@ -349,6 +349,27 @@ class Command(BaseCommand):
         }
         return credentials
 
+    def get_supervisor_name(self, supervisor_email):
+        """Get supervisor's name from their email"""
+        try:
+            cursor = connection.cursor()
+            cursor.execute("""
+                SELECT u.firstname, u.lastname
+                FROM users u
+                WHERE u.mail = %s
+                AND u.status = 1
+                LIMIT 1;
+            """, [supervisor_email])
+            
+            result = cursor.fetchone()
+            if result:
+                return f"{result[0]} {result[1]}"
+            return None
+            
+        except Exception as e:
+            self.stdout.write(self.style.ERROR('Error getting supervisor name: %s' % str(e)))
+            return None
+
     def handle(self, *args, **options):
         print "\n=== Starting Supervisor Report Generation ==="
         
@@ -382,6 +403,9 @@ class Command(BaseCommand):
 
             for supervisor_email in supervisors:
                 self.stdout.write('\nProcessing supervisor: {}'.format(supervisor_email))
+                
+                # Get supervisor's name
+                supervisor_name = self.get_supervisor_name(supervisor_email)
 
                 # Get team members for this supervisor only
                 cursor.execute("""
@@ -436,7 +460,8 @@ class Command(BaseCommand):
                             'start_date': start_date,
                             'end_date': end_date,
                             'monthly': True,
-                            'week_numbers': week_numbers  # Add week numbers to context
+                            'week_numbers': week_numbers,
+                            'supervisor_name': supervisor_name  # Add supervisor name to context
                         }
                     else:
                         # Weekly report for this supervisor
@@ -449,7 +474,8 @@ class Command(BaseCommand):
                             'entries': self.process_entries(entries),
                             'start_date': start_date,
                             'end_date': end_date,
-                            'monthly': False
+                            'monthly': False,
+                            'supervisor_name': supervisor_name  # Add supervisor name to context
                         }
 
                     if entries.exists():
