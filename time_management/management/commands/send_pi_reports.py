@@ -182,9 +182,11 @@ class Command(BaseCommand):
     def process_monthly_data(self, entries_by_week):
         """Process entries into project-centric format with weeks"""
         project_data = {}
+        column_totals = {}  # Track totals for each week
         
         # Process each week's entries
         for week_num, entries in entries_by_week.items():
+            column_totals[week_num] = 0  # Initialize week total
             for entry in entries:
                 project_code = entry.project.identifier if entry.project else 'No Project'
                 username = '%s %s' % (entry.user.firstname, entry.user.lastname)
@@ -192,11 +194,15 @@ class Command(BaseCommand):
                 activity = entry.comments if entry.comments else (entry.activity.name if entry.activity else 'No Activity')
                 hours = float(entry.hours)
                 
+                # Add to column total for this week
+                column_totals[week_num] += hours
+                
                 # Initialize project if needed
                 if project_code not in project_data:
                     project_data[project_code] = {
                         'total_hours': 0,
-                        'users': {}
+                        'users': {},
+                        'column_totals': column_totals  # Add column totals to project data
                     }
                 
                 # Add to project total
@@ -218,6 +224,10 @@ class Command(BaseCommand):
                 
                 # Add hours to activity week
                 project_data[project_code]['users'][username]['activities'][activity][week_num] = hours
+        
+        # Add column totals to each project
+        for project in project_data.values():
+            project['column_totals'] = column_totals
         
         return dict(sorted(project_data.items()))
 
@@ -359,12 +369,14 @@ class Command(BaseCommand):
     def process_entries(self, entries):
         """Process entries for weekly report format"""
         report_data = {}
+        total_hours = 0  # Track total hours
         
         for entry in entries:
             project_code = entry.project.identifier if entry.project else 'No Project'
             username = '%s %s' % (entry.user.firstname, entry.user.lastname)
             username = username.strip()
             hours = float(entry.hours)
+            total_hours += hours  # Add to total
             
             # Use comments as activities if they exist
             activity = entry.comments if entry.comments else (entry.activity.name if entry.activity else 'No Activity')
@@ -373,11 +385,13 @@ class Command(BaseCommand):
             if project_code not in report_data:
                 report_data[project_code] = {
                     'total_hours': 0,
-                    'users': {}
+                    'users': {},
+                    'total_column': 0  # Add total column for weekly
                 }
             
             # Add to project total
             report_data[project_code]['total_hours'] += hours
+            report_data[project_code]['total_column'] += hours  # Add to total column
             
             # Initialize user if not exists
             if username not in report_data[project_code]['users']:
