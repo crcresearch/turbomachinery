@@ -137,7 +137,7 @@
                             <td>Column Totals</td>
                             {% for week_num in week_numbers %}
                                 <td style="text-align: right;">
-                                    {{ project_data.column_totals|get:week_num|floatformat:1 }}
+                                    {{ project_data.column_totals|get_item:week_num|floatformat:1 }}
                                 </td>
                             {% endfor %}
                             <td style="text-align: right;">{{ project_data.total_hours|floatformat:1 }}</td>
