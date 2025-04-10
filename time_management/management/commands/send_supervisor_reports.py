@@ -387,6 +387,69 @@ class Command(BaseCommand):
             print "Error getting supervisor name: %s" % str(e)  # Using Python 2 print
             return supervisor_email  # Fallback to email on error
 
+    def process_monthly_entries(self, entries, start_date, end_date):
+        """Process entries for monthly report with weekly columns"""
+        report_data = {}
+        
+        # Calculate week ranges
+        current_date = start_date
+        week_ranges = []
+        week_num = 1
+        while current_date <= end_date:
+            week_end = min(current_date + timedelta(days=6), end_date)
+            week_ranges.append((week_num, current_date, week_end))
+            current_date = week_end + timedelta(days=1)
+            week_num += 1
+        
+        # Process entries by user and week
+        for entry in entries:
+            username = '%s %s' % (entry.user.firstname, entry.user.lastname)
+            username = username.strip()
+            project_code = entry.project.identifier if entry.project else 'No Project'
+            hours = float(entry.hours)
+            activity = entry.comments if entry.comments else (entry.activity.name if entry.activity else 'No Activity')
+            
+            # Find which week this entry belongs to
+            entry_week = None
+            for week_num, week_start, week_end in week_ranges:
+                if week_start <= entry.spent_on <= week_end:
+                    entry_week = week_num
+                    break
+            
+            if entry_week is None:
+                continue
+            
+            # Initialize user data structure
+            if username not in report_data:
+                report_data[username] = {
+                    'projects': {},
+                    'total_hours': 0
+                }
+            
+            # Initialize project
+            if project_code not in report_data[username]['projects']:
+                report_data[username]['projects'][project_code] = {
+                    'weeks': {w[0]: 0 for w in week_ranges},
+                    'activities': {},
+                    'total_hours': 0
+                }
+            
+            # Initialize activity
+            if activity not in report_data[username]['projects'][project_code]['activities']:
+                report_data[username]['projects'][project_code]['activities'][activity] = {
+                    'weeks': {w[0]: 0 for w in week_ranges}
+                }
+            
+            # Add hours to appropriate week
+            report_data[username]['projects'][project_code]['weeks'][entry_week] = \
+                report_data[username]['projects'][project_code]['weeks'].get(entry_week, 0) + hours
+            report_data[username]['projects'][project_code]['activities'][activity]['weeks'][entry_week] = \
+                report_data[username]['projects'][project_code]['activities'][activity]['weeks'].get(entry_week, 0) + hours
+            report_data[username]['projects'][project_code]['total_hours'] += hours
+            report_data[username]['total_hours'] += hours
+        
+        return report_data, [w[0] for w in week_ranges]
+
     def handle(self, *args, **options):
         print "\n=== Starting Team Manager Report Generation ==="
         
@@ -410,15 +473,25 @@ class Command(BaseCommand):
                 ).select_related('user', 'project', 'activity')
 
                 if entries.exists():
-                    processed_entries = self.process_entries(entries)
-                    
-                    context = {
-                        'entries': processed_entries,
-                        'start_date': start_date,
-                        'end_date': end_date,
-                        'monthly': options.get('monthly', False),
-                        'supervisor_name': "%s %s" % (manager.firstname, manager.lastname)
-                    }
+                    if options.get('monthly', False):
+                        processed_data, week_numbers = self.process_monthly_entries(entries, start_date, end_date)
+                        context = {
+                            'entries': processed_data,
+                            'week_numbers': week_numbers,
+                            'start_date': start_date,
+                            'end_date': end_date,
+                            'monthly': True,
+                            'supervisor_name': "%s %s" % (manager.firstname, manager.lastname)
+                        }
+                    else:
+                        processed_entries = self.process_entries(entries)
+                        context = {
+                            'entries': processed_entries,
+                            'start_date': start_date,
+                            'end_date': end_date,
+                            'monthly': False,
+                            'supervisor_name': "%s %s" % (manager.firstname, manager.lastname)
+                        }
 
                     html_content = render_to_string('emails/supervisor_monthly_report.html', context)
                     subject = 'NDTL Team Manager %s Report (%s - %s)' % (
