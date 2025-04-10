@@ -354,10 +354,13 @@ class Command(BaseCommand):
         try:
             cursor = connection.cursor()
             cursor.execute("""
-                SELECT firstname, lastname
-                FROM users
-                WHERE mail = %s
-                AND status = 1
+                SELECT firstname, lastname 
+                FROM users u 
+                JOIN custom_values cv ON cv.customized_id = u.id
+                JOIN custom_fields cf ON cf.id = cv.custom_field_id
+                WHERE cf.name = 'Supervisor Notification Emails'
+                AND cv.value = %s
+                AND u.status = 1
                 LIMIT 1;
             """, [supervisor_email])
             
