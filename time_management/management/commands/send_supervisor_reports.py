@@ -178,13 +178,12 @@ class Command(BaseCommand):
                 }
             project_totals[project_code]['total_hours'] += hours
             
-            # Track activity within project totals
             activity = entry.comments if entry.comments else (entry.activity.name if entry.activity else 'No Activity')
             if activity not in project_totals[project_code]['activities']:
                 project_totals[project_code]['activities'][activity] = 0
             project_totals[project_code]['activities'][activity] += hours
             
-            # Rest of the existing user/project processing...
+            # Process individual entries
             if username not in report_data:
                 report_data[username] = {
                     'total_hours': 0,
@@ -195,26 +194,21 @@ class Command(BaseCommand):
             if project_code not in report_data[username]['projects']:
                 report_data[username]['projects'][project_code] = {
                     'total_hours': 0,
-                    'activities': {}
+                    'activities': {},
+                    'total_column': 0  # Add this for the total column
                 }
             report_data[username]['projects'][project_code]['total_hours'] += hours
+            report_data[username]['projects'][project_code]['total_column'] = report_data[username]['projects'][project_code]['total_hours']  # Set total column
             
             if activity not in report_data[username]['projects'][project_code]['activities']:
                 report_data[username]['projects'][project_code]['activities'][activity] = hours
             else:
                 report_data[username]['projects'][project_code]['activities'][activity] += hours
 
-        # Add project totals section before the grand total
-        sorted_projects = sorted(project_totals.items(), key=lambda x: (-x[1]['total_hours'], x[0]))
-        report_data['PROJECT TOTALS'] = {
+        # Add project totals section
+        report_data['PROJECT TOTALS - Total Hours: %.2f' % grand_total] = {
             'total_hours': grand_total,
-            'projects': dict(sorted_projects)
-        }
-
-        # Add grand total at the end
-        report_data['TOTAL'] = {
-            'total_hours': grand_total,
-            'projects': {}
+            'projects': project_totals
         }
 
         return dict(sorted(report_data.items()))
