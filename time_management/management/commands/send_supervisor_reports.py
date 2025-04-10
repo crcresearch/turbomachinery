@@ -87,7 +87,7 @@ class Command(BaseCommand):
 
     def send_notification(self, to_email, message_body, message_subject):
         msg = MIMEText(message_body, 'html')
-        msg['Subject'] = 'NDTL Supervisor Weekly Report (Mar 29 - Apr 04)'  # This should be dynamic
+        msg['Subject'] = message_subject
         msg['From'] = 'noreply@turbo.crc.nd.edu'
         msg['To'] = to_email
         
@@ -160,41 +160,62 @@ class Command(BaseCommand):
 
     def process_entries(self, entries):
         report_data = {}
+        grand_total = 0
+        project_totals = {}  # Track project totals
         
         for entry in entries:
             username = '%s %s' % (entry.user.firstname, entry.user.lastname)
             username = username.strip()
             project_code = entry.project.identifier if entry.project else 'No Project'
             hours = float(entry.hours)
+            grand_total += hours
             
-            # Use comments as activities if they exist
+            # Track project totals
+            if project_code not in project_totals:
+                project_totals[project_code] = {
+                    'total_hours': 0,
+                    'activities': {}
+                }
+            project_totals[project_code]['total_hours'] += hours
+            
+            # Track activity within project totals
             activity = entry.comments if entry.comments else (entry.activity.name if entry.activity else 'No Activity')
+            if activity not in project_totals[project_code]['activities']:
+                project_totals[project_code]['activities'][activity] = 0
+            project_totals[project_code]['activities'][activity] += hours
             
-            # Initialize user if not exists
+            # Rest of the existing user/project processing...
             if username not in report_data:
                 report_data[username] = {
                     'total_hours': 0,
                     'projects': {}
                 }
-            
-            # Add to user total
             report_data[username]['total_hours'] += hours
             
-            # Initialize project if not exists
             if project_code not in report_data[username]['projects']:
                 report_data[username]['projects'][project_code] = {
                     'total_hours': 0,
                     'activities': {}
                 }
-            
-            # Add to project total
             report_data[username]['projects'][project_code]['total_hours'] += hours
             
-            # Add to activity data
             if activity not in report_data[username]['projects'][project_code]['activities']:
                 report_data[username]['projects'][project_code]['activities'][activity] = hours
             else:
                 report_data[username]['projects'][project_code]['activities'][activity] += hours
+
+        # Add project totals section before the grand total
+        sorted_projects = sorted(project_totals.items(), key=lambda x: (-x[1]['total_hours'], x[0]))
+        report_data['PROJECT TOTALS'] = {
+            'total_hours': grand_total,
+            'projects': dict(sorted_projects)
+        }
+
+        # Add grand total at the end
+        report_data['TOTAL'] = {
+            'total_hours': grand_total,
+            'projects': {}
+        }
 
         return dict(sorted(report_data.items()))
 
