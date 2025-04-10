@@ -183,7 +183,7 @@ class Command(BaseCommand):
                 project_totals[project_code]['activities'][activity] = 0
             project_totals[project_code]['activities'][activity] += hours
             
-            # Process individual entries
+            # Process individual entries - consolidate by username
             if username not in report_data:
                 report_data[username] = {
                     'total_hours': 0,
@@ -194,19 +194,17 @@ class Command(BaseCommand):
             if project_code not in report_data[username]['projects']:
                 report_data[username]['projects'][project_code] = {
                     'total_hours': 0,
-                    'activities': {},
-                    'total_column': 0  # Add this for the total column
+                    'activities': {}
                 }
             report_data[username]['projects'][project_code]['total_hours'] += hours
-            report_data[username]['projects'][project_code]['total_column'] = report_data[username]['projects'][project_code]['total_hours']  # Set total column
             
             if activity not in report_data[username]['projects'][project_code]['activities']:
                 report_data[username]['projects'][project_code]['activities'][activity] = hours
             else:
                 report_data[username]['projects'][project_code]['activities'][activity] += hours
 
-        # Add project totals section
-        report_data['PROJECT TOTALS - Total Hours: %.2f' % grand_total] = {
+        # Add project totals at the end
+        report_data['PROJECT TOTALS'] = {
             'total_hours': grand_total,
             'projects': project_totals
         }
@@ -402,7 +400,7 @@ class Command(BaseCommand):
                 manager = team.manager
                 print '\nProcessing manager: {} {}'.format(manager.firstname, manager.lastname)
                 
-                # Get manager's email from Redmine database
+                # Get manager's email
                 cursor = connection.cursor()
                 cursor.execute("""
                     SELECT address 
@@ -425,38 +423,57 @@ class Command(BaseCommand):
                 if team_members:
                     manager_name = "%s %s" % (manager.firstname, manager.lastname)
                     
-                    entries = TimeEntry.objects.filter(
-                        user__in=team_members,
-                        spent_on__range=[start_date, end_date]
-                    ).select_related('user', 'project', 'activity')
+                    if options.get('monthly', False):
+                        # Monthly report processing
+                        entries = TimeEntry.objects.filter(
+                            user__in=team_members,
+                            spent_on__range=[start_date, end_date]
+                        ).select_related('user', 'project', 'activity')
 
-                    if entries.exists():
-                        processed_entries = self.process_entries(entries)
-                        
-                        # Calculate total hours
-                        total_hours = sum(entry.hours for entry in entries)
-                        
-                        context = {
-                            'entries': processed_entries,
-                            'start_date': start_date,
-                            'end_date': end_date,
-                            'monthly': options.get('monthly', False),
-                            'supervisor_name': manager_name,
-                            'total_hours': total_hours  # Add total hours to context
-                        }
+                        if entries.exists():
+                            processed_entries = self.process_entries(entries)
+                            
+                            context = {
+                                'entries': processed_entries,  # Changed from weekly_data to entries
+                                'start_date': start_date,
+                                'end_date': end_date,
+                                'monthly': True,
+                                'supervisor_name': manager_name,
+                            }
 
-                        html_content = render_to_string('emails/supervisor_monthly_report.html', context)
-                        subject = 'NDTL Team Manager %s Report (%s - %s)' % (
-                            'Monthly' if options.get('monthly', False) else 'Weekly',
-                            start_date.strftime('%b %d'),
-                            end_date.strftime('%b %d')
-                        )
+                            html_content = render_to_string('emails/supervisor_monthly_report.html', context)
+                            subject = 'NDTL Team Manager Monthly Report (%s - %s)' % (
+                                start_date.strftime('%b %d'),
+                                end_date.strftime('%b %d')
+                            )
+                    else:
+                        # Weekly report processing (unchanged)
+                        entries = TimeEntry.objects.filter(
+                            user__in=team_members,
+                            spent_on__range=[start_date, end_date]
+                        ).select_related('user', 'project', 'activity')
 
-                        # Send to test email without modifying subject
-                        to_email = options.get('test_email') if options.get('test_email') else manager_email
+                        if entries.exists():
+                            processed_entries = self.process_entries(entries)
+                            
+                            context = {
+                                'entries': processed_entries,
+                                'start_date': start_date,
+                                'end_date': end_date,
+                                'monthly': False,
+                                'supervisor_name': manager_name,
+                            }
 
-                        self.send_notification(to_email, html_content, subject)
-                        print "Sent report to %s" % to_email
+                            html_content = render_to_string('emails/supervisor_monthly_report.html', context)
+                            subject = 'NDTL Team Manager Weekly Report (%s - %s)' % (
+                                start_date.strftime('%b %d'),
+                                end_date.strftime('%b %d')
+                            )
+
+                    # Send the report
+                    to_email = options.get('test_email') if options.get('test_email') else manager_email
+                    self.send_notification(to_email, html_content, subject)
+                    print "Sent report to %s" % to_email
 
         except Exception as e:
             print "Error: %s" % str(e)
