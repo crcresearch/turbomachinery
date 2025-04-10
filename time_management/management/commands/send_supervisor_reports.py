@@ -387,11 +387,27 @@ class Command(BaseCommand):
                 manager = team.manager
                 print '\nProcessing manager: {} {}'.format(manager.firstname, manager.lastname)
                 
+                # Get manager's email from Redmine database
+                cursor = connection.cursor()
+                cursor.execute("""
+                    SELECT address 
+                    FROM email_addresses 
+                    WHERE user_id = %s 
+                    AND is_default = true
+                    LIMIT 1;
+                """, [manager.id])
+                result = cursor.fetchone()
+                manager_email = result[0] if result else None
+                
+                if not manager_email:
+                    print "Warning: No email found for manager %s %s" % (manager.firstname, manager.lastname)
+                    continue
+                
+                # Get team members
                 team_members = TeamMember.objects.filter(team=team).values_list('member', flat=True)
                 team_members = RedmineUser.objects.filter(id__in=team_members)
 
                 if team_members:
-                    manager_email = manager.mail
                     manager_name = "%s %s" % (manager.firstname, manager.lastname)
                     
                     entries = TimeEntry.objects.filter(
@@ -399,15 +415,15 @@ class Command(BaseCommand):
                         spent_on__range=[start_date, end_date]
                     ).select_related('user', 'project', 'activity')
 
-                    context = {
-                        'entries': self.process_entries(entries),
-                        'start_date': start_date,
-                        'end_date': end_date,
-                        'monthly': False,
-                        'supervisor_name': manager_name  # Using manager name instead
-                    }
-
                     if entries.exists():
+                        context = {
+                            'entries': self.process_entries(entries),
+                            'start_date': start_date,
+                            'end_date': end_date,
+                            'monthly': options.get('monthly', False),
+                            'supervisor_name': manager_name
+                        }
+
                         html_content = render_to_string('emails/supervisor_monthly_report.html', context)
                         subject = 'NDTL Team Manager %s Report (%s - %s)' % (
                             'Monthly' if options.get('monthly', False) else 'Weekly',
@@ -421,8 +437,8 @@ class Command(BaseCommand):
                             subject = '[%s] %s' % (manager_email, subject)
 
                         self.send_notification(to_email, html_content, subject)
-                        self.stdout.write(self.style.SUCCESS('Sent report to %s' % to_email))
+                        print "Sent report to %s" % to_email
 
         except Exception as e:
-            self.stdout.write(self.style.ERROR('Error: {}'.format(str(e))))
+            print "Error: %s" % str(e)
             raise 
