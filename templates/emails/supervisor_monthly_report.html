@@ -122,7 +122,7 @@
                     <tr class="total-row">
                         <td><strong>Total Hours</strong></td>
                         {% for week in week_numbers %}
-                            <td><strong>{{ data.total_hours|floatformat:2 }}</strong></td>
+                            <td><strong>{{ data.weekly_totals|get_item:week|floatformat:2 }}</strong></td>
                         {% endfor %}
                         <td><strong>{{ data.total_hours|floatformat:2 }}</strong></td>
                     </tr>
