@@ -363,7 +363,7 @@ class Command(BaseCommand):
             
             result = cursor.fetchone()
             if result:
-                return f"{result[0]} {result[1]}"
+                return "%s %s" % (result[0], result[1])
             return None
             
         except Exception as e:
