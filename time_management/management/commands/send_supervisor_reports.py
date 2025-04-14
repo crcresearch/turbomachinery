@@ -52,7 +52,6 @@ class Command(BaseCommand):
 
     def get_report_dates(self, monthly=False, options=None):
         """Get start and end dates for the report period."""
-        # Check for explicit dates first
         if options and options.get('start_date') and options.get('end_date'):
             return (
                 datetime.strptime(options['start_date'], '%Y-%m-%d').date(),
@@ -62,27 +61,36 @@ class Command(BaseCommand):
         today = timezone.now().date()
         
         if monthly:
-            # Get last day of previous month
-            if today.month == 1:  # January
-                prev_month_end = today.replace(year=today.year-1, month=12, day=31)
-            else:
-                prev_month_end = today.replace(day=1) - timedelta(days=1)
+            # Find the last Friday of current month
+            current_month_end = today.replace(day=1) + timedelta(days=32)  # Go to next month
+            current_month_end = current_month_end.replace(day=1) - timedelta(days=1)  # Back to last day
             
-            # Find the last Friday of previous month
-            last_friday = prev_month_end
+            last_friday = current_month_end
             while last_friday.weekday() != 4:  # 4 is Friday
                 last_friday -= timedelta(days=1)
             
-            # Start date is the day after the last Friday of previous month
-            start_date = last_friday + timedelta(days=1)
-            # End date is today
-            end_date = today
-            
-            return start_date, end_date
+            if today == last_friday:
+                # Find the last Friday of previous month
+                prev_month_end = today.replace(day=1) - timedelta(days=1)
+                prev_last_friday = prev_month_end
+                while prev_last_friday.weekday() != 4:
+                    prev_last_friday -= timedelta(days=1)
+                
+                # Start from day AFTER the previous last Friday
+                start_date = prev_last_friday + timedelta(days=1)
+                end_date = last_friday
+                return start_date, end_date
         else:
-            # Weekly report logic remains unchanged
-            end_date = today - timedelta(days=(today.weekday() + 3) % 7)
-            start_date = end_date - timedelta(days=6)
+            # Weekly report: Running on Monday, covering previous Sat-Fri
+            if today.weekday() == 0:  # Monday
+                end_date = today - timedelta(days=3)  # Previous Friday
+                start_date = end_date - timedelta(days=6)  # Previous Saturday
+            else:
+                # If running on a different day, still maintain Sat-Fri pattern
+                days_after_friday = (today.weekday() - 4) % 7
+                end_date = today - timedelta(days=days_after_friday)  # Most recent Friday
+                start_date = end_date - timedelta(days=6)  # Saturday before that
+            
             return start_date, end_date
 
     def send_notification(self, to_email, message_body, message_subject):
