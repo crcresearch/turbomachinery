@@ -382,6 +382,8 @@ class Command(BaseCommand):
         
         for entry in entries:
             project_code = entry.project.identifier if entry.project else 'No Project'
+            project_name = entry.project.name if entry.project else 'No Project'
+            project_code = "%s (%s)" % (project_name, project_code)  # Update project_code to include name
             username = '%s %s' % (entry.user.firstname, entry.user.lastname)
             username = username.strip()
             hours = float(entry.hours)
