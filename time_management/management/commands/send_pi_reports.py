@@ -243,9 +243,9 @@ class Command(BaseCommand):
     def get_db_credentials(self):
         """Get database credentials"""
         credentials = {
-            'POSTGRES_DB': 'redmine',
-            'POSTGRES_USER': 'postgres',
-            'POSTGRES_PASSWORD': "Let's go turbo!"
+            'POSTGRES_DB': os.environ.get('POSTGRES_DB'),
+            'POSTGRES_USER': os.environ.get('POSTGRES_USER'),
+            'POSTGRES_PASSWORD': os.environ.get('POSTGRES_PASSWORD')
         }
         return credentials
 
@@ -358,7 +358,7 @@ class Command(BaseCommand):
 
                 if entries.exists():
                     html_content = render_to_string('emails/pi_monthly_report.html', context)
-                    subject = 'NDTL PI %s Report (%s - %s)' % (
+                    subject = 'ND P&P PI %s Report (%s - %s)' % (
                         'Monthly' if options.get('monthly') else 'Weekly',
                         start_date.strftime('%b %d'),
                         end_date.strftime('%b %d')

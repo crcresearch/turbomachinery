@@ -18,11 +18,25 @@ ENV = environ.Env()
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+# Read environment files from .envs directory
+env_path = os.path.join(os.path.dirname(BASE_DIR), '.envs', '.production')
+if os.path.exists(env_path):
+    # Load production environment files
+    django_env = os.path.join(env_path, '.django')
+    postgres_env = os.path.join(env_path, '.postgres')
+    if os.path.exists(django_env):
+        environ.Env.read_env(django_env)
+    if os.path.exists(postgres_env):
+        environ.Env.read_env(postgres_env)
+else:
+    # Fallback to single .env file
+    environ.Env.read_env(os.path.join(os.path.dirname(BASE_DIR), '.env'))
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/1.10/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'yc5-g-8l8bl$)o5^rbg%*&*$k&8kwfqvb3v1m9fp*f3ee7a=cx'
+SECRET_KEY = ENV('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -44,7 +58,7 @@ INSTALLED_APPS = [
     #'skillsmatrix.apps.SkillsmatrixConfig',
     # used on prod for CAS authentication
     #'cas'
-    'mozilla_django_oidc',
+    #'mozilla_django_oidc',
 ]
 
 MIDDLEWARE_CLASSES = [
@@ -88,11 +102,11 @@ WSGI_APPLICATION = 'pr.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'redmine',
-        'USER': 'redmine',
-        'PASSWORD': 'redminepass',
-        'HOST': '129.74.246.37',
-        'PORT': '5432'
+        'NAME': ENV('POSTGRES_DB'),
+        'USER': ENV('POSTGRES_USER'),
+        'PASSWORD': ENV('POSTGRES_PASSWORD'),
+        'HOST': ENV('POSTGRES_HOST'),
+        'PORT': ENV('POSTGRES_PORT', default='5432')
     }
 }
 

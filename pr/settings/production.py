@@ -1,6 +1,6 @@
 from pr.settings.base import *
 
-SECRET_KEY = 'hwqm-j5hk80(boz%uy_wy+h)ouye*6dyjl&h17fn7xf$_#1095'
+SECRET_KEY = ENV('SECRET_KEY')
 DEBUG = False
 
 
@@ -9,11 +9,11 @@ ALLOWED_HOSTS = ['turbo.crc.nd.edu']
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'redmine_default',
-        'USER': 'redmine_system',
-        'PASSWORD': 'Lets go turbo!',
-        'HOST': 'turbo.crc.nd.edu',
-        'PORT': '5432'
+        'NAME': ENV('POSTGRES_DB'),
+        'USER': ENV('POSTGRES_USER'),
+        'PASSWORD': ENV('POSTGRES_PASSWORD'),
+        'HOST': ENV('POSTGRES_HOST'),
+        'PORT': ENV('POSTGRES_PORT', default='5432')
     }
 }
 

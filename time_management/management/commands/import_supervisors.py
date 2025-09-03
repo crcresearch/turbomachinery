@@ -12,7 +12,11 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         # get a list of all users
-        connection = psycopg2.connect(database='redmine_default', user='redmine_system', password='Lets go turbo!')
+        connection = psycopg2.connect(
+            database=os.environ.get('POSTGRES_DB'), 
+            user=os.environ.get('POSTGRES_USER'), 
+            password=os.environ.get('POSTGRES_PASSWORD')
+        )
         cursor = connection.cursor()
 
         # get the custom field id for supervisor lists
