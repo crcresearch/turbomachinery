@@ -7,6 +7,7 @@ from datetime import datetime, timedelta, date
 from time_management.models import TimeEntry, RedmineUser, Project
 import logging
 import html2text
+import os
 import re
 import smtplib
 from email.mime.text import MIMEText
