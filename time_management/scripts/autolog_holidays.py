@@ -11,10 +11,10 @@ import psycopg2
 def log_holiday(date, name):
     print "Connecting..."
     connection = psycopg2.connect(
-        host='localhost',
-        user='redmine_system',
-        password='Lets go turbo!',
-        database='redmine_default'
+        host=os.environ.get('POSTGRES_HOST'),
+        user=os.environ.get('POSTGRES_USER'),
+        password=os.environ.get('POSTGRES_PASSWORD'),
+        database=os.environ.get('POSTGRES_DB')
     )
     cursor = connection.cursor()
     # get the project ID for "University Holidays"

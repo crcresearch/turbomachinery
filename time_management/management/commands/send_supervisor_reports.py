@@ -49,6 +49,11 @@ class Command(BaseCommand):
             type=str,
             help='End date (YYYY-MM-DD)',
         )
+        parser.add_argument(
+            '--manager_email',
+            type=str,
+            help='Send report only to this specific manager (use their login username, e.g., jsmith)',
+        )
 
     def get_report_dates(self, monthly=False, options=None):
         """Get start and end dates for the report period."""
@@ -368,9 +373,9 @@ class Command(BaseCommand):
     def get_db_credentials(self):
         """Get database credentials"""
         credentials = {
-            'POSTGRES_DB': 'redmine',
-            'POSTGRES_USER': 'postgres',
-            'POSTGRES_PASSWORD': "Let's go turbo!"
+            'POSTGRES_DB': os.environ.get('POSTGRES_DB'),
+            'POSTGRES_USER': os.environ.get('POSTGRES_USER'),
+            'POSTGRES_PASSWORD': os.environ.get('POSTGRES_PASSWORD')
         }
         return credentials
 
@@ -471,6 +476,13 @@ class Command(BaseCommand):
         try:
             managers = Team.objects.select_related('manager').all()
             
+            # Filter by specific manager if requested
+            if options.get('manager_email'):
+                managers = managers.filter(manager__login=options['manager_email'])
+                if not managers.exists():
+                    print "No team found for manager with login: %s" % options['manager_email']
+                    return
+            
             for team in managers:
                 manager = team.manager
                 print '\nProcessing manager: {} {}'.format(manager.firstname, manager.lastname)
@@ -506,7 +518,7 @@ class Command(BaseCommand):
                         }
 
                     html_content = render_to_string('emails/supervisor_monthly_report.html', context)
-                    subject = 'NDTL Team Manager %s Report (%s - %s)' % (
+                    subject = 'ND P&P Team Manager %s Report (%s - %s)' % (
                         'Monthly' if options.get('monthly', False) else 'Weekly',
                         start_date.strftime('%b %d'),
                         end_date.strftime('%b %d')

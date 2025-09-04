@@ -11,6 +11,9 @@ services:
     volumes:
         - .:/code/
         - static_volume:/opt/services/djangoapp/static
+    env_file:
+      - .envs/.production/.django
+      - .envs/.production/.postgres
     depends_on:
       - database1
     networks:
@@ -39,10 +42,8 @@ services:
     image: redmine:latest
     volumes:
       - redmine_volume:/usr
-    environment:
-      REDMINE_DB_POSTGRES: database1
-      REDMINE_DB_DATABASE: 'redmine'
-      REDMINE_DB_PASSWORD: "Let's go turbo!"
+    env_file:
+      - .envs/.production/.postgres
     depends_on:
       - database1
     networks:

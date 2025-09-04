@@ -92,7 +92,12 @@ def get_offending_users():
     dateframe = get_last_date_range()
 
     # get a list of all users which have supervisors
-    connection = psycopg2.connect(host='database1', database='redmine', user='postgres', password="Let's go turbo!")
+    connection = psycopg2.connect(
+        host=os.environ.get('POSTGRES_HOST'), 
+        database=os.environ.get('POSTGRES_DB'), 
+        user=os.environ.get('POSTGRES_USER'), 
+        password=os.environ.get('POSTGRES_PASSWORD')
+    )
     cursor = connection.cursor()
 
     # get the custom field id for supervisor lists
