@@ -9,7 +9,7 @@
                 Login
             </div>
             <div class="panel-body">
-                <form action="{% url 'login' %}" method="POST">
+                <form action="/reports/login/" method="POST">
                     {% csrf_token %}
                     {% if error %}<div class="alert alert-danger" role="alert">{{ error }}</div>{% endif %}
                     <input type="text" class="form-control" placeholder="Username" name="username" /><br />

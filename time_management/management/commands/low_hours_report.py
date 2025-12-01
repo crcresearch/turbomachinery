@@ -12,7 +12,7 @@ from email.mime.application import MIMEApplication
 import smtplib
 
 
-REPORT_TO_LIST = ['Beata.Nabrzyska.1@nd.edu']
+REPORT_TO_LIST = ['Beata.Nabrzyska.1@nd.edu', 'jspeybr1@nd.edu', 'nharris6@nd.edu', 'ballison@nd.edu', 'dhipskin@nd.edu', 'hmadigan@nd.edu', 'mnavarr6@nd.edu', 'briggle3@nd.edu']
 #REPORT_TO_LIST = ['dpettifo@nd.edu']
 
 class Command(BaseCommand):

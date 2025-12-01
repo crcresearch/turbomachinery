@@ -32,7 +32,7 @@ from time_management.rates import rates_home, save_rate, save_start_date, save_e
 from time_management.auth import login_page, logout_request
 from time_management.project_hours import project_hours_page, get_project_hours, get_users_for_project
 
-import cas.views
+#import cas.views
 from django.conf import settings
 from time_management.team_management import team_management, get_teams, get_team, save_manager, remove_team_member, \
     add_team_member, remove_team, create_team
@@ -120,9 +120,10 @@ urlpatterns = [
     url(r'^weekly_report/$', weekly_report_form_url, name='weekly_report'),
 
     # Used if on production for CAS authentication
-    url(r'^login/$', cas.views.login, name='login'),
-    url(r'^logout/$', cas.views.logout, name='logout'),
-
+    #url(r'^login/$', cas.views.login, name='login'),
+    #url(r'^logout/$', cas.views.logout, name='logout'),
+    
+    url(r'^oidc/', include('mozilla_django_oidc.urls')),
     # OR you can use these login pages:
     #url(r'^accounts/login/$', cas.views.login, name='account_login'),
     #url(r'^accounts/logout/$', cas.views.logout, name='account_logout'),

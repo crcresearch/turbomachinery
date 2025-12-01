@@ -1,6 +1,8 @@
+django-cas-client==1.4.0
 Django==1.11.13
 django-extensions==2.0.7
 et-xmlfile==1.0.1
+gunicorn
 jdcal==1.4
 openpyxl==2.5.4
 psycopg2==2.7.4
@@ -10,3 +12,4 @@ six==1.11.0
 typing==3.6.4
 django-environ>=0.4.5
 html2text==2019.8.11
+mozilla-django-oidc==1.2.2
