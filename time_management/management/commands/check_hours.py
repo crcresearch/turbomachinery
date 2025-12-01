@@ -1,5 +1,6 @@
 from django.core.management.base import BaseCommand, CommandError 
 import datetime
+import os
 import psycopg2
 import smtplib
 # Import the email modules we'll need
